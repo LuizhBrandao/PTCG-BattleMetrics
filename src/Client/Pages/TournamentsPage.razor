@@ -1,0 +1,208 @@
+@page "/tournaments"
+@inject BattleMetricsClientService ClientService
+
+<div class="tournaments-page">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div style="font-weight: 800; font-size: 1.15rem; color: #F8FAFC;">🏆 Torneios & Eventos</div>
+        <button type="button" class="btn-sync" style="padding: 6px 12px; font-size: 0.85rem;" 
+                @onclick="() => showCreateModal = !showCreateModal">
+            @(showCreateModal ? "Fechar" : "+ Novo Torneio")
+        </button>
+    </div>
+
+    @if (showCreateModal)
+    {
+        <div class="battle-card" style="border: 2px solid #EAB308;">
+            <div class="card-header-title">
+                <span>Novo Torneio</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Nome do Evento *</label>
+                <input type="text" class="form-input" placeholder="ex: League Cup Nerdz Games" @bind="tourneyName" />
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label class="form-label">Loja / Local</label>
+                    <input type="text" class="form-input" placeholder="ex: Nerdz Arena" @bind="venue" />
+                </div>
+                <div>
+                    <label class="form-label">Data</label>
+                    <input type="date" class="form-input" @bind="tourneyDate" />
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label class="form-label">Categoria</label>
+                    <select class="form-select" @bind="category">
+                        <option value="@TournamentCategory.Casual">Treino Casual</option>
+                        <option value="@TournamentCategory.LeagueChallenge">League Challenge</option>
+                        <option value="@TournamentCategory.LeagueCup">League Cup</option>
+                        <option value="@TournamentCategory.Regional">Regional</option>
+                        <option value="@TournamentCategory.SpecialEvent">Special Event</option>
+                        <option value="@TournamentCategory.International">Internacional (IC)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Formato</label>
+                    <select class="form-select" @bind="format">
+                        <option value="@TournamentFormat.SwissBo1">Suíço Bo1 (30 min)</option>
+                        <option value="@TournamentFormat.SwissBo3">Suíço Bo3 (50 min)</option>
+                        <option value="@TournamentFormat.TopCut">Top Cut (Eliminatória)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;">
+                <div>
+                    <label class="form-label">Participantes</label>
+                    <input type="number" class="form-input" placeholder="32" @bind="totalParticipants" />
+                </div>
+                <div>
+                    <label class="form-label">Posição Final</label>
+                    <input type="number" class="form-input" placeholder="Top 4" @bind="finalStanding" />
+                </div>
+                <div>
+                    <label class="form-label">CPs Ganhos</label>
+                    <input type="number" class="form-input" placeholder="40" @bind="championshipPoints" />
+                </div>
+            </div>
+
+            <button type="button" class="btn-primary-action" 
+                    @onclick="CreateTournament" 
+                    disabled="@string.IsNullOrWhiteSpace(tourneyName)">
+                🏆 Salvar e Ativar Torneio
+            </button>
+        </div>
+    }
+
+    @if (tournaments.Count == 0)
+    {
+        <div class="battle-card" style="text-align: center; padding: 30px; color: #94A3B8;">
+            <p>Nenhum torneio registrado.</p>
+            <button type="button" class="btn-sync" style="padding: 8px 16px; font-size: 0.9rem;" 
+                    @onclick="() => showCreateModal = true">
+                + Cadastrar Torneio
+            </button>
+        </div>
+    }
+    else
+    {
+        @foreach (var t in tournaments)
+        {
+            var isActive = t.Id == activeTourneyId;
+            <div class="battle-card" style="border: @(isActive ? "2px solid #EAB308" : "1px solid var(--border-color)");">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-weight: 800; font-size: 1.05rem; color: #F8FAFC;">@t.Name</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #94A3B8; margin-top: 2px;">
+                            @(t.StoreOrVenue ?? "Local não inf.") • @t.Date.ToString("dd/MM/yyyy")
+                        </div>
+                    </div>
+
+                    @if (isActive)
+                    {
+                        <button type="button" class="btn-sync" style="background: rgba(234, 179, 8, 0.2); color: #FDE047; border: 1px solid #EAB308;"
+                                @onclick="() => SetActiveTournament(null)">
+                            ✓ ATIVO (Desativar)
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn-sync" style="background: #1E293B; border: 1px solid #334155;" 
+                                @onclick="() => SetActiveTournament(t.Id)">
+                            Ativar
+                        </button>
+                    }
+                </div>
+
+                <!-- Stats summary -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; padding: 8px 0; border-top: 1px solid #2D3B55; margin-top: 8px;">
+                    <div>
+                        <div style="color: #94A3B8; font-size: 0.65rem;">RECORD</div>
+                        <div style="font-weight: 900; font-size: 0.95rem; color: #34D399;">@t.RecordDisplay</div>
+                    </div>
+                    <div>
+                        <div style="color: #94A3B8; font-size: 0.65rem;">MATCH POINTS</div>
+                        <div style="font-weight: 900; font-size: 0.95rem; color: #818CF8;">@t.MatchPoints pts</div>
+                    </div>
+                    <div>
+                        <div style="color: #94A3B8; font-size: 0.65rem;">POSIÇÃO</div>
+                        <div style="font-weight: 900; font-size: 0.95rem; color: #FBBF24;">
+                            @(t.FinalStanding.HasValue ? $"{t.FinalStanding}º" : "-")
+                        </div>
+                    </div>
+                    <div>
+                        <div style="color: #94A3B8; font-size: 0.65rem;">CPs</div>
+                        <div style="font-weight: 900; font-size: 0.95rem; color: #C084FC;">
+                            @(t.ChampionshipPoints.HasValue ? $"+{t.ChampionshipPoints}" : "-")
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<TournamentResponse> tournaments = new();
+    private Guid? activeTourneyId;
+    private bool showCreateModal = false;
+
+    private string tourneyName = "";
+    private string? venue;
+    private DateOnly tourneyDate = DateOnly.FromDateTime(DateTime.UtcNow);
+    private TournamentCategory category = TournamentCategory.LeagueCup;
+    private TournamentFormat format = TournamentFormat.SwissBo3;
+    private int? totalParticipants;
+    private int? finalStanding;
+    private int? championshipPoints;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTournamentsAsync();
+    }
+
+    private async Task LoadTournamentsAsync()
+    {
+        tournaments = await ClientService.GetTournamentsAsync();
+        activeTourneyId = await ClientService.GetActiveTournamentIdAsync();
+    }
+
+    private async Task CreateTournament()
+    {
+        if (string.IsNullOrWhiteSpace(tourneyName)) return;
+
+        var req = new CreateTournamentRequest(
+            Name: tourneyName.Trim(),
+            StoreOrVenue: venue?.Trim(),
+            Date: tourneyDate,
+            Category: category,
+            Format: format,
+            TotalParticipants: totalParticipants,
+            FinalStanding: finalStanding,
+            ChampionshipPoints: championshipPoints
+        );
+
+        await ClientService.CreateTournamentAsync(req);
+
+        showCreateModal = false;
+        tourneyName = "";
+        venue = null;
+        totalParticipants = null;
+        finalStanding = null;
+        championshipPoints = null;
+
+        await LoadTournamentsAsync();
+    }
+
+    private async Task SetActiveTournament(Guid? id)
+    {
+        await ClientService.SetActiveTournamentIdAsync(id);
+        activeTourneyId = id;
+    }
+}

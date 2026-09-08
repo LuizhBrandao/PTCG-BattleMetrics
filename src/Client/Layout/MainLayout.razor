@@ -1,0 +1,76 @@
+@inherits LayoutComponentBase
+@inject BattleMetricsClientService ClientService
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="app-container">
+    <!-- Top Navbar -->
+    <header class="top-navbar">
+        <div class="brand-title">
+            <span style="font-size: 1.25rem;">⚡</span>
+            <span>PTCG Metrics</span>
+            <span class="brand-badge">PWA</span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+            @if (ClientService.PendingSyncCount > 0)
+            {
+                <button class="btn-sync" @onclick="SyncPending" title="Sincronizar partidas registradas offline">
+                    🔄 Sincronizar (@ClientService.PendingSyncCount)
+                </button>
+            }
+
+            <div class="status-badge @(ClientService.IsOnline ? "status-online" : "status-offline")">
+                <span class="status-dot"></span>
+                <span>@(ClientService.IsOnline ? "Online" : "Offline")</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Page Content -->
+    <main class="page-content">
+        @Body
+    </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="bottom-nav">
+        <NavLink class="nav-item" href="" Match="NavLinkMatch.All">
+            <span class="nav-icon">⚡</span>
+            <span>Torneio</span>
+        </NavLink>
+        <NavLink class="nav-item" href="metrics">
+            <span class="nav-icon">📊</span>
+            <span>Métricas</span>
+        </NavLink>
+        <NavLink class="nav-item" href="decks">
+            <span class="nav-icon">🃏</span>
+            <span>Decks</span>
+        </NavLink>
+        <NavLink class="nav-item" href="tournaments">
+            <span class="nav-icon">🏆</span>
+            <span>Eventos</span>
+        </NavLink>
+        <NavLink class="nav-item" href="history">
+            <span class="nav-icon">📜</span>
+            <span>Histórico</span>
+        </NavLink>
+    </nav>
+</div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ClientService.OnDataChanged += StateHasChanged;
+    }
+
+    private async Task SyncPending()
+    {
+        var count = await ClientService.SyncPendingMatchesAsync();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        ClientService.OnDataChanged -= StateHasChanged;
+    }
+}

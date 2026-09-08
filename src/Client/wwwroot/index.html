@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B0F19" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>PTCG Battle Metrics</title>
+    <base href="/" />
+    <link rel="stylesheet" href="css/battle-metrics.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link href="manifest.webmanifest" rel="manifest" />
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png" />
+</head>
+
+<body>
+    <div id="app">
+        <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #0B0F19; color: #F8FAFC; font-family: sans-serif;">
+            <div style="font-size: 2rem; margin-bottom: 12px;">⚡</div>
+            <div style="font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em;">PTCG Battle Metrics</div>
+            <div style="font-size: 0.85rem; color: #94A3B8; margin-top: 6px;">Carregando telemetria...</div>
+        </div>
+    </div>
+
+    <div id="blazor-error-ui" style="display: none;">
+        Ocorreu um erro não tratado.
+        <a href="." class="reload">Recarregar</a>
+        <span class="dismiss">🗙</span>
+    </div>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script>navigator.serviceWorker.register('service-worker.js');</script>
+</body>
+
+</html>

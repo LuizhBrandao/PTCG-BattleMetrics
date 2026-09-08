@@ -1,0 +1,488 @@
+@page "/"
+@inject BattleMetricsClientService ClientService
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="tournament-fast-mode">
+    <!-- Tournament Banner if active -->
+    @if (activeTournament != null)
+    {
+        <div style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 0.75rem; color: #818CF8; font-weight: 700; text-transform: uppercase;">Evento Ativo</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #F8FAFC;">@activeTournament.Name</div>
+            </div>
+            <div style="text-align: right;">
+                <div style="font-size: 0.75rem; color: #94A3B8;">Record</div>
+                <div style="font-size: 0.95rem; font-weight: 900; color: #10B981;">@activeTournament.RecordDisplay (@activeTournament.MatchPoints pts)</div>
+            </div>
+        </div>
+    }
+
+    <!-- Fast Input Card (< 10s Mode) -->
+    <div class="battle-card">
+        <div class="card-header-title">
+            <span>⚡ Registro Rápido</span>
+            <span style="font-size: 0.75rem; color: #10B981; font-weight: 700;">3 Campos Obrigatórios</span>
+        </div>
+
+        <!-- Campo 1: Deck Utilizado -->
+        <div class="form-group">
+            <label class="form-label">1. Deck Utilizado *</label>
+            @if (decks.Count == 0)
+            {
+                <div style="font-size: 0.85rem; color: #FBBF24; padding: 8px; background: rgba(245, 158, 11, 0.1); border-radius: 8px;">
+                    Nenhum deck cadastrado. <a href="decks" style="color: #60A5FA; font-weight: 700;">Criar Deck</a>
+                </div>
+            }
+            else
+            {
+                <select class="form-select" @bind="selectedDeckId">
+                    @foreach (var d in decks)
+                    {
+                        <option value="@d.Id">@d.Name (@d.Archetype @d.Version)</option>
+                    }
+                </select>
+            }
+        </div>
+
+        <!-- Campo 2: Arquétipo Enfrentado -->
+        <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="margin-bottom: 0;">2. Arquétipo Enfrentado *</label>
+                <span style="font-size: 0.7rem; color: #818CF8; font-weight: 600;">Toque em um chip do Meta</span>
+            </div>
+
+            <!-- Meta Quick Chips -->
+            <div class="chip-scroller">
+                @foreach (var arch in metaArchetypes)
+                {
+                    <button type="button" 
+                            class="archetype-chip @(selectedArchetype == arch.Name ? "selected" : "")"
+                            @onclick="() => SelectArchetype(arch.Name)">
+                        @arch.Name
+                    </button>
+                }
+            </div>
+
+            <!-- Custom / Search Input -->
+            <input type="text" class="form-input" placeholder="Ou digite outro arquétipo..." 
+                   @bind="selectedArchetype" @bind:event="oninput" style="margin-top: 8px;" />
+        </div>
+
+        <!-- Campo 3: Resultado (3 botões grandes) -->
+        <div class="form-group">
+            <label class="form-label">3. Resultado da Partida *</label>
+            <div class="result-button-grid">
+                <button type="button" 
+                        class="btn-result btn-win @(selectedResult == MatchResult.Win ? "selected" : "")"
+                        @onclick="() => selectedResult = MatchResult.Win">
+                    <span>🏆</span>
+                    <span>Vitória</span>
+                </button>
+
+                <button type="button" 
+                        class="btn-result btn-loss @(selectedResult == MatchResult.Loss ? "selected" : "")"
+                        @onclick="() => selectedResult = MatchResult.Loss">
+                    <span>❌</span>
+                    <span>Derrota</span>
+                </button>
+
+                <button type="button" 
+                        class="btn-result btn-tie @(selectedResult == MatchResult.Tie ? "selected" : "")"
+                        @onclick="() => selectedResult = MatchResult.Tie">
+                    <span>⚖️</span>
+                    <span>Empate</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Progressive Disclosure: Telemetria Detalhada da Partida -->
+        <div style="margin-top: 8px;">
+            <button type="button" class="accordion-toggle" @onclick="() => showTelemetry = !showTelemetry">
+                <span style="display: flex; align-items: center; gap: 8px;">
+                    <span>📈</span>
+                    <span>Telemetria Detalhada da Partida (Opcional)</span>
+                </span>
+                <span>@(showTelemetry ? "▲ Recolher" : "▼ Expandir")</span>
+            </button>
+
+            @if (showTelemetry)
+            {
+                <div class="accordion-content">
+                    <!-- Rodada & Mesa -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                        <div>
+                            <label class="form-label">Rodada (Round)</label>
+                            <input type="number" class="form-input" min="1" max="20" placeholder="ex: 1" @bind="roundNumber" />
+                        </div>
+                        <div>
+                            <label class="form-label">Número da Mesa</label>
+                            <input type="number" class="form-input" min="1" max="999" placeholder="ex: 14" @bind="tableNumber" />
+                        </div>
+                    </div>
+
+                    <!-- Adversário & POP ID -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                        <div>
+                            <label class="form-label">Nome do Oponente</label>
+                            <input type="text" class="form-input" placeholder="ex: Ash Ketchum" @bind="opponentName" />
+                        </div>
+                        <div>
+                            <label class="form-label">POP ID (Opcional)</label>
+                            <input type="text" class="form-input" placeholder="ex: 1234567" @bind="opponentPopId" />
+                        </div>
+                    </div>
+
+                    <!-- Iniciativa: Cara ou Coroa & Ordem de Turno -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                        <div>
+                            <label class="form-label">Cara ou Coroa</label>
+                            <div class="turn-order-selector">
+                                <button type="button" class="btn-segment @(coinFlipWon == true ? "selected" : "")"
+                                        @onclick="() => coinFlipWon = true">Venceu</button>
+                                <button type="button" class="btn-segment @(coinFlipWon == false ? "selected" : "")"
+                                        @onclick="() => coinFlipWon = false">Perdeu</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">Ordem de Turno</label>
+                            <div class="turn-order-selector">
+                                <button type="button" class="btn-segment @(turnOrder == TurnOrder.First ? "selected" : "")"
+                                        @onclick="() => turnOrder = TurnOrder.First">1º a Jogar</button>
+                                <button type="button" class="btn-segment @(turnOrder == TurnOrder.Second ? "selected" : "")"
+                                        @onclick="() => turnOrder = TurnOrder.Second">2º a Jogar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mulligans: Jogador vs Oponente -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                        <div>
+                            <label class="form-label">Meus Mulligans: @playerMulligans</label>
+                            <div class="number-stepper">
+                                <button type="button" class="btn-step" @onclick="() => playerMulligans = Math.Max(0, playerMulligans - 1)">-</button>
+                                <span class="stepper-val">@playerMulligans</span>
+                                <button type="button" class="btn-step" @onclick="() => playerMulligans++">+</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="form-label">Mulligans Oponente: @opponentMulligans</label>
+                            <div class="number-stepper">
+                                <button type="button" class="btn-step" @onclick="() => opponentMulligans = Math.Max(0, opponentMulligans - 1)">-</button>
+                                <span class="stepper-val">@opponentMulligans</span>
+                                <button type="button" class="btn-step" @onclick="() => opponentMulligans++">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prêmios Restantes: Jogador vs Oponente -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                        <div>
+                            <label class="form-label">Meus Prêmios Restantes (0-6)</label>
+                            <select class="form-select" @bind="playerPrizesRemaining">
+                                <option value="0">0 (Comprei todos 6)</option>
+                                <option value="1">1 restante</option>
+                                <option value="2">2 restantes</option>
+                                <option value="3">3 restantes</option>
+                                <option value="4">4 restantes</option>
+                                <option value="5">5 restantes</option>
+                                <option value="6">6 restantes (0 comprados)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Prêmios Restantes Oponente</label>
+                            <select class="form-select" @bind="opponentPrizesRemaining">
+                                <option value="0">0 (Oponente levou 6)</option>
+                                <option value="1">1 restante</option>
+                                <option value="2">2 restantes</option>
+                                <option value="3">3 restantes</option>
+                                <option value="4">4 restantes</option>
+                                <option value="5">5 restantes</option>
+                                <option value="6">6 restantes</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Condição de Vitória & Pokémon Ativo Inicial -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                        <div>
+                            <label class="form-label">Condição de Término</label>
+                            <select class="form-select" @bind="winCondition">
+                                <option value="@WinCondition.PrizeKnockout">Nocaute / 6 Prêmios</option>
+                                <option value="@WinCondition.Concede">Concede (Rendição)</option>
+                                <option value="@WinCondition.DeckOut">Deck Out (Fim do Baralho)</option>
+                                <option value="@WinCondition.TimeoutSuddenDeath">Timeout / Morte Súbita</option>
+                                <option value="@WinCondition.PenaltyDQ">Penalidade / DQ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Pokémon Ativo Inicial</label>
+                            <input type="text" class="form-input" placeholder="ex: Charmander, Rotom V..." @bind="startingActive" />
+                        </div>
+                    </div>
+
+                    <!-- Tech Cards Utilizadas na Rodada -->
+                    @if (ActiveDeckTechCards.Count > 0)
+                    {
+                        <div class="form-group">
+                            <label class="form-label">Tech Cards Acionadas nesta Partida</label>
+                            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                @foreach (var tech in ActiveDeckTechCards)
+                                {
+                                    var isSelected = techCardsUsed.Contains(tech);
+                                    <button type="button" 
+                                            class="archetype-chip @(isSelected ? "selected" : "")"
+                                            @onclick="() => ToggleTechCard(tech)">
+                                        @(isSelected ? "✓ " : "+ ")@tech
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Anotações Táticas -->
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">Anotações Táticas (Erros, Prizadas Críticas)</label>
+                        <textarea class="form-textarea" rows="2" 
+                                  placeholder="ex: Erro de sequenciamento no T2; Super Rod veio prizada." 
+                                  @bind="tacticalNotes"></textarea>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Botão de Ação Rápida (Submeter Partida) -->
+        <button type="button" class="btn-primary-action" 
+                @onclick="SaveMatch" 
+                disabled="@(isSaving || string.IsNullOrWhiteSpace(selectedArchetype) || selectedDeckId == Guid.Empty)">
+            @if (isSaving)
+            {
+                <span>Salvando...</span>
+            }
+            else
+            {
+                <span>⚡ Salvar Partida (&lt; 10s)</span>
+            }
+        </button>
+    </div>
+
+    <!-- Feedback Toast -->
+    @if (showToast)
+    {
+        <div class="toast-success">
+            ✓ Partida salva com sucesso! (@lastResultDisplay vs @selectedArchetype)
+        </div>
+    }
+
+    <!-- Últimas Partidas Recentes -->
+    <div class="battle-card">
+        <div class="card-header-title">
+            <span>🕒 Rodadas Recentes</span>
+            <a href="history" style="font-size: 0.75rem; color: #818CF8; text-decoration: none; font-weight: 700;">Ver Histórico →</a>
+        </div>
+
+        @if (recentMatches.Count == 0)
+        {
+            <div style="text-align: center; padding: 20px 0; color: #64748B; font-size: 0.85rem;">
+                Nenhuma partida registrada ainda. Salve sua primeira partida acima!
+            </div>
+        }
+        else
+        {
+            @foreach (var m in recentMatches.Take(3))
+            {
+                <div class="matrix-row">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <span style="font-weight: 800; font-size: 0.95rem; color: #F1F5F9;">vs @m.OpponentArchetype</span>
+                            @if (m.RoundNumber.HasValue)
+                            {
+                                <span style="font-size: 0.7rem; background: #334155; padding: 1px 6px; border-radius: 4px; color: #94A3B8;">R@m.RoundNumber</span>
+                            }
+                        </div>
+                        <div style="font-size: 0.75rem; color: #94A3B8; margin-top: 2px;">
+                            @m.DeckName • @(m.CreatedAt.LocalDateTime.ToString("HH:mm"))
+                        </div>
+                    </div>
+                    <div>
+                        @if (m.Result == MatchResult.Win)
+                        {
+                            <span class="badge-favorable">VITÓRIA</span>
+                        }
+                        else if (m.Result == MatchResult.Loss)
+                        {
+                            <span class="badge-unfavorable">DERROTA</span>
+                        }
+                        else
+                        {
+                            <span class="badge-neutral">EMPATE</span>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<DeckResponse> decks = new();
+    private List<MetaArchetype> metaArchetypes = new();
+    private List<MatchResponse> recentMatches = new();
+    private TournamentResponse? activeTournament;
+
+    // Fast Input Fields
+    private Guid selectedDeckId = Guid.Empty;
+    private string selectedArchetype = "";
+    private MatchResult selectedResult = MatchResult.Win;
+
+    // Progressive Disclosure Telemetry Fields
+    private bool showTelemetry = false;
+    private int? roundNumber;
+    private int? tableNumber;
+    private string? opponentName;
+    private string? opponentPopId;
+    private bool? coinFlipWon;
+    private TurnOrder? turnOrder;
+    private int playerMulligans = 0;
+    private int opponentMulligans = 0;
+    private int playerPrizesRemaining = 0;
+    private int opponentPrizesRemaining = 6;
+    private WinCondition winCondition = WinCondition.PrizeKnockout;
+    private string? startingActive;
+    private string? tacticalNotes;
+    private HashSet<string> techCardsUsed = new();
+
+    private bool isSaving = false;
+    private bool showToast = false;
+    private string lastResultDisplay = "";
+
+    private List<string> ActiveDeckTechCards =>
+        decks.FirstOrDefault(d => d.Id == selectedDeckId)?.TechCards ?? new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ClientService.OnDataChanged += HandleDataChanged;
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        decks = await ClientService.GetDecksAsync();
+        metaArchetypes = await ClientService.GetArchetypesAsync();
+
+        var activeDeckId = await ClientService.GetActiveDeckIdAsync();
+        if (activeDeckId.HasValue && decks.Any(d => d.Id == activeDeckId.Value))
+        {
+            selectedDeckId = activeDeckId.Value;
+        }
+        else if (decks.Count > 0)
+        {
+            selectedDeckId = decks[0].Id;
+        }
+
+        var activeTourneyId = await ClientService.GetActiveTournamentIdAsync();
+        if (activeTourneyId.HasValue)
+        {
+            var tourneys = await ClientService.GetTournamentsAsync();
+            activeTournament = tourneys.FirstOrDefault(t => t.Id == activeTourneyId.Value);
+        }
+
+        recentMatches = await ClientService.GetMatchesAsync();
+
+        // If in tournament, guess next round number
+        if (activeTournament != null)
+        {
+            var tourneyMatches = recentMatches.Where(m => m.TournamentId == activeTournament.Id).ToList();
+            roundNumber = tourneyMatches.Count + 1;
+        }
+    }
+
+    private void SelectArchetype(string arch)
+    {
+        selectedArchetype = arch;
+    }
+
+    private void ToggleTechCard(string tech)
+    {
+        if (techCardsUsed.Contains(tech))
+            techCardsUsed.Remove(tech);
+        else
+            techCardsUsed.Add(tech);
+    }
+
+    private async Task SaveMatch()
+    {
+        if (selectedDeckId == Guid.Empty || string.IsNullOrWhiteSpace(selectedArchetype))
+            return;
+
+        isSaving = true;
+
+        var request = new CreateMatchRequest(
+            DeckId: selectedDeckId,
+            OpponentArchetype: selectedArchetype.Trim(),
+            Result: selectedResult,
+            TournamentId: activeTournament?.Id,
+            RoundNumber: roundNumber,
+            TableNumber: tableNumber,
+            OpponentName: opponentName,
+            OpponentPopId: opponentPopId,
+            CoinFlipWon: coinFlipWon,
+            TurnOrder: turnOrder,
+            PlayerMulligans: playerMulligans,
+            OpponentMulligans: opponentMulligans,
+            PlayerPrizesRemaining: showTelemetry ? playerPrizesRemaining : (selectedResult == MatchResult.Win ? 0 : 6),
+            OpponentPrizesRemaining: showTelemetry ? opponentPrizesRemaining : (selectedResult == MatchResult.Loss ? 0 : 6),
+            WinCondition: showTelemetry ? winCondition : null,
+            StartingActivePokemon: startingActive,
+            TacticalNotes: tacticalNotes,
+            TechCardsUsed: techCardsUsed.ToList(),
+            CreatedAt: DateTimeOffset.UtcNow
+        );
+
+        lastResultDisplay = selectedResult switch
+        {
+            MatchResult.Win => "Vitória",
+            MatchResult.Loss => "Derrota",
+            _ => "Empate"
+        };
+
+        await ClientService.SaveMatchAsync(request);
+
+        // Reset for next round
+        if (roundNumber.HasValue) roundNumber++;
+        selectedArchetype = "";
+        opponentName = null;
+        opponentPopId = null;
+        startingActive = null;
+        tacticalNotes = null;
+        techCardsUsed.Clear();
+        showTelemetry = false;
+        playerMulligans = 0;
+        opponentMulligans = 0;
+
+        recentMatches = await ClientService.GetMatchesAsync();
+        isSaving = false;
+        showToast = true;
+
+        _ = Task.Delay(2500).ContinueWith(_ =>
+        {
+            showToast = false;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void HandleDataChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await LoadDataAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        ClientService.OnDataChanged -= HandleDataChanged;
+    }
+}

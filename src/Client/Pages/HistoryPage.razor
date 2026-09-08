@@ -1,0 +1,161 @@
+@page "/history"
+@inject BattleMetricsClientService ClientService
+
+<div class="history-page">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div style="font-weight: 800; font-size: 1.15rem; color: #F8FAFC;">📜 Histórico de Partidas</div>
+        <span style="font-size: 0.8rem; color: #94A3B8;">@filteredMatches.Count partidas</span>
+    </div>
+
+    <!-- Filter input -->
+    <div class="battle-card" style="padding: 10px 14px; margin-bottom: 12px;">
+        <input type="text" class="form-input" placeholder="Filtrar por arquétipo (ex: Lugia, Gardevoir)..." 
+               @bind="searchTerm" @bind:event="oninput" style="padding: 8px 12px;" />
+    </div>
+
+    @if (filteredMatches.Count == 0)
+    {
+        <div class="battle-card" style="text-align: center; padding: 30px; color: #94A3B8;">
+            Nenhuma partida encontrada com o filtro aplicado.
+        </div>
+    }
+    else
+    {
+        @foreach (var m in filteredMatches)
+        {
+            var isExpanded = expandedMatchId == m.Id;
+            <div class="battle-card" style="margin-bottom: 10px; cursor: pointer;" @onclick="() => ToggleExpand(m.Id)">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-weight: 800; font-size: 1.05rem; color: #F8FAFC;">vs @m.OpponentArchetype</span>
+                            @if (m.RoundNumber.HasValue)
+                            {
+                                <span style="background: #1E293B; color: #818CF8; border: 1px solid #334155; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
+                                    R@m.RoundNumber
+                                </span>
+                            }
+                            @if (m.TableNumber.HasValue)
+                            {
+                                <span style="font-size: 0.7rem; color: #64748B;">Mesa @m.TableNumber</span>
+                            }
+                        </div>
+                        <div style="font-size: 0.75rem; color: #94A3B8; margin-top: 2px;">
+                            @m.DeckName • @m.CreatedAt.LocalDateTime.ToString("dd/MM/yyyy HH:mm")
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        @if (m.Result == MatchResult.Win)
+                        {
+                            <span class="badge-favorable">VITÓRIA</span>
+                        }
+                        else if (m.Result == MatchResult.Loss)
+                        {
+                            <span class="badge-unfavorable">DERROTA</span>
+                        }
+                        else
+                        {
+                            <span class="badge-neutral">EMPATE</span>
+                        }
+                        <span style="font-size: 0.75rem; color: #64748B;">@(isExpanded ? "▲" : "▼")</span>
+                    </div>
+                </div>
+
+                <!-- Expanded Telemetry Details -->
+                @if (isExpanded)
+                {
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #2D3B55; font-size: 0.8rem; color: #CBD5E1;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                            <div>
+                                Iniciativa: 
+                                <strong>@(m.TurnOrder == TurnOrder.First ? "1º a Jogar" : (m.TurnOrder == TurnOrder.Second ? "2º a Jogar" : "Não informado"))</strong>
+                                @if (m.CoinFlipWon.HasValue)
+                                {
+                                    <span style="color: @(m.CoinFlipWon.Value ? "#34D399" : "#F87171"); font-size: 0.75rem;">
+                                        (@(m.CoinFlipWon.Value ? "Moeda: Venceu" : "Moeda: Perdeu"))
+                                    </span>
+                                }
+                            </div>
+                            <div>
+                                Prêmios Restantes: 
+                                <strong>@(m.PlayerPrizesRemaining?.ToString() ?? "-")</strong> (Meus) vs 
+                                <strong>@(m.OpponentPrizesRemaining?.ToString() ?? "-")</strong> (Oponente)
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+                            <div>
+                                Mulligans: 
+                                <strong>@(m.PlayerMulligans?.ToString() ?? "0")</strong> (Meus) vs 
+                                <strong>@(m.OpponentMulligans?.ToString() ?? "0")</strong> (Oponente)
+                            </div>
+                            <div>
+                                Condição: 
+                                <strong>@(m.WinCondition.HasValue ? m.WinCondition.Value.ToString() : "Nocaute")</strong>
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(m.StartingActivePokemon))
+                        {
+                            <div style="margin-bottom: 6px;">
+                                Ativo Inicial: <strong style="color: #60A5FA;">@m.StartingActivePokemon</strong>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(m.OpponentName))
+                        {
+                            <div style="margin-bottom: 6px;">
+                                Oponente: <strong>@m.OpponentName</strong> @(string.IsNullOrWhiteSpace(m.OpponentPopId) ? "" : $"({m.OpponentPopId})")
+                            </div>
+                        }
+
+                        @if (m.TechCardsUsed.Count > 0)
+                        {
+                            <div style="margin-top: 6px; margin-bottom: 6px;">
+                                <div style="font-size: 0.7rem; color: #64748B; text-transform: uppercase;">Tech Cards Utilizadas:</div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px;">
+                                    @foreach (var t in m.TechCardsUsed)
+                                    {
+                                        <span style="background: rgba(99, 102, 241, 0.2); color: #818CF8; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px;">
+                                            @t
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(m.TacticalNotes))
+                        {
+                            <div style="margin-top: 8px; padding: 8px; background: #0F172A; border-radius: 6px; border-left: 3px solid #6366F1; font-style: italic; color: #94A3B8;">
+                                "@m.TacticalNotes"
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private List<MatchResponse> matches = new();
+    private string searchTerm = "";
+    private Guid? expandedMatchId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        matches = await ClientService.GetMatchesAsync();
+    }
+
+    private List<MatchResponse> filteredMatches => string.IsNullOrWhiteSpace(searchTerm)
+        ? matches
+        : matches.Where(m => m.OpponentArchetype.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                             (m.DeckName != null && m.DeckName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                             (m.OpponentName != null && m.OpponentName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))).ToList();
+
+    private void ToggleExpand(Guid id)
+    {
+        expandedMatchId = expandedMatchId == id ? null : id;
+    }
+}

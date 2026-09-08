@@ -1,0 +1,378 @@
+@page "/metrics"
+@inject BattleMetricsClientService ClientService
+
+<div class="metrics-page">
+    <!-- Header & Deck Filter -->
+    <div class="battle-card" style="padding: 12px 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="font-weight: 800; font-size: 1.1rem; color: #F8FAFC;">📊 Métricas & Telemetria</div>
+            <select class="form-select" style="width: auto; max-width: 180px; padding: 6px 10px; font-size: 0.8rem;" 
+                    @bind="selectedDeckFilter" @bind:after="LoadMetricsAsync">
+                <option value="">Todos os Decks</option>
+                @foreach (var d in decks)
+                {
+                    <option value="@d.Id">@d.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs for Analytics -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 14px;">
+        <button type="button" class="btn-segment @(activeTab == "overview" ? "selected" : "")" 
+                @onclick="@(() => activeTab = "overview")">Geral</button>
+        <button type="button" class="btn-segment @(activeTab == "matrix" ? "selected" : "")" 
+                @onclick="@(() => activeTab = "matrix")">Matchups</button>
+        <button type="button" class="btn-segment @(activeTab == "initiative" ? "selected" : "")" 
+                @onclick="@(() => activeTab = "initiative")">Iniciativa</button>
+        <button type="button" class="btn-segment @(activeTab == "telemetry" ? "selected" : "")" 
+                @onclick="@(() => activeTab = "telemetry")">Avançada</button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div style="text-align: center; padding: 40px 0; color: #94A3B8;">
+            Calculando estatísticas competitivas...
+        </div>
+    }
+    else if (overview?.TotalMatches == 0)
+    {
+        <div class="battle-card" style="text-align: center; padding: 30px 16px; color: #94A3B8;">
+            <div style="font-size: 2rem; margin-bottom: 8px;">🃏</div>
+            <div style="font-weight: 700; color: #F1F5F9; font-size: 1rem;">Nenhum dado analítico disponível</div>
+            <p style="font-size: 0.85rem; margin-top: 6px;">Registre partidas na aba <strong>Torneio</strong> para visualizar métricas aprofundadas.</p>
+        </div>
+    }
+    else
+    {
+        <!-- TAB 1: VISÃO GERAL -->
+        @if (activeTab == "overview" && overview != null)
+        {
+            <!-- Big Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-box" style="border-top: 3px solid #6366F1;">
+                    <div class="stat-value" style="color: #818CF8;">@overview.OverallWinRate%</div>
+                    <div class="stat-label">Win Rate Geral</div>
+                    <div style="font-size: 0.7rem; color: #94A3B8; margin-top: 2px;">@overview.TotalWins V - @overview.TotalLosses D - @overview.TotalTies E</div>
+                </div>
+
+                <div class="stat-box" style="border-top: 3px solid #10B981;">
+                    <div class="stat-value" style="color: #34D399;">@overview.NonTieWinRate%</div>
+                    <div class="stat-label">WR Sem Empates</div>
+                    <div style="font-size: 0.7rem; color: #94A3B8; margin-top: 2px;">Total: @overview.TotalMatches jogos</div>
+                </div>
+            </div>
+
+            <!-- Performance por Deck -->
+            <div class="battle-card">
+                <div class="card-header-title">
+                    <span>Performance por Deck</span>
+                </div>
+                @foreach (var d in overview.DecksPerformance)
+                {
+                    <div class="matrix-row">
+                        <div>
+                            <div style="font-weight: 700; font-size: 0.9rem; color: #F8FAFC;">@d.DeckName</div>
+                            <div style="font-size: 0.75rem; color: #94A3B8;">@d.Matches partidas (@d.Wins-@d.Losses-@d.Ties)</div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-weight: 900; font-size: 1.05rem; color: @(d.WinRate >= 50 ? "#34D399" : "#F87171");">
+                                @d.WinRate%
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Performance por Formato -->
+            @if (overview.FormatsPerformance.Count > 0)
+            {
+                <div class="battle-card">
+                    <div class="card-header-title">
+                        <span>Performance por Formato</span>
+                    </div>
+                    @foreach (var f in overview.FormatsPerformance)
+                    {
+                        <div class="matrix-row">
+                            <div>
+                                <div style="font-weight: 700; font-size: 0.9rem; color: #F8FAFC;">@f.FormatName</div>
+                                <div style="font-size: 0.75rem; color: #94A3B8;">@f.Matches jogos (@f.Wins-@f.Losses-@f.Ties)</div>
+                            </div>
+                            <div style="font-weight: 900; font-size: 1.05rem; color: @(f.WinRate >= 50 ? "#34D399" : "#F87171");">
+                                @f.WinRate%
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+
+        <!-- TAB 2: MATRIZ DE MATCHUPS -->
+        @if (activeTab == "matrix")
+        {
+            <div class="battle-card">
+                <div class="card-header-title">
+                    <span>Matriz de Matchups (@matchups.Count arquétipos)</span>
+                </div>
+
+                @if (matchups.Count == 0)
+                {
+                    <div style="color: #94A3B8; font-size: 0.85rem; text-align: center; padding: 12px 0;">
+                        Nenhum confronto computado ainda.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var m in matchups)
+                    {
+                        <div style="background: #1E293B; border: 1px solid #334155; border-radius: 10px; padding: 12px; margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <div>
+                                    <span style="font-weight: 800; font-size: 1rem; color: #F8FAFC;">vs @m.OpponentArchetype</span>
+                                </div>
+                                <div>
+                                    @if (m.Rating == MatchupRating.Favorable)
+                                    {
+                                        <span class="badge-favorable">FAVORÁVEL</span>
+                                    }
+                                    else if (m.Rating == MatchupRating.Neutral)
+                                    {
+                                        <span class="badge-neutral">NEUTRO</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-unfavorable">DESFAVORÁVEL</span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                                <div style="font-size: 0.8rem; color: #94A3B8;">
+                                    Record: <strong style="color: #F8FAFC;">@m.Wins V - @m.Losses D - @m.Ties E</strong> (@m.Matches jogos)
+                                </div>
+                                <div style="font-size: 1.15rem; font-weight: 900; color: @(m.WinRate >= 50 ? "#34D399" : "#F87171");">
+                                    @m.WinRate% WR
+                                </div>
+                            </div>
+
+                            <!-- Additional Breakdown -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding-top: 8px; border-top: 1px solid #334155; font-size: 0.75rem; color: #CBD5E1;">
+                                <div>
+                                    Média Prêmios Comprados: <strong style="color: #38BDF8;">@m.AvgPlayerPrizesTaken</strong> / 6
+                                </div>
+                                <div>
+                                    Média Prêmios Oponente: <strong style="color: #F87171;">@m.AvgOpponentPrizesTaken</strong> / 6
+                                </div>
+                                <div>
+                                    WR Indo em 1º: <strong>@m.GoingFirstWinRate%</strong>
+                                </div>
+                                <div>
+                                    WR Indo em 2º: <strong>@m.GoingSecondWinRate%</strong>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        }
+
+        <!-- TAB 3: IMPACTO DE INICIATIVA -->
+        @if (activeTab == "initiative" && initiative != null)
+        {
+            <div class="stats-grid">
+                <div class="stat-box" style="border-top: 3px solid #3B82F6;">
+                    <div class="stat-value" style="color: #60A5FA;">@initiative.FirstWinRate%</div>
+                    <div class="stat-label">Indo em 1º (First)</div>
+                    <div style="font-size: 0.7rem; color: #94A3B8; margin-top: 2px;">@initiative.FirstWins V de @initiative.FirstTotal jogos</div>
+                </div>
+
+                <div class="stat-box" style="border-top: 3px solid #A855F7;">
+                    <div class="stat-value" style="color: #C084FC;">@initiative.SecondWinRate%</div>
+                    <div class="stat-label">Indo em 2º (Second)</div>
+                    <div style="font-size: 0.7rem; color: #94A3B8; margin-top: 2px;">@initiative.SecondWins V de @initiative.SecondTotal jogos</div>
+                </div>
+            </div>
+
+            <div class="battle-card">
+                <div class="card-header-title">
+                    <span>Iniciativa por Arquétipo Enfrentado</span>
+                </div>
+                @if (initiative.ArchetypeInitiatives.Count == 0)
+                {
+                    <div style="color: #94A3B8; font-size: 0.85rem; text-align: center; padding: 12px 0;">
+                        Registre a ordem de turno na telemetria para ver dados discriminados.
+                    </div>
+                }
+                else
+                {
+                    @foreach (var a in initiative.ArchetypeInitiatives)
+                    {
+                        <div class="matrix-row">
+                            <div>
+                                <div style="font-weight: 700; font-size: 0.9rem; color: #F8FAFC;">vs @a.Archetype</div>
+                                <div style="font-size: 0.75rem; color: #94A3B8;">1º: @a.FirstMatches jg | 2º: @a.SecondMatches jg</div>
+                            </div>
+                            <div style="display: flex; gap: 12px; text-align: right; font-size: 0.85rem;">
+                                <div>
+                                    <div style="color: #94A3B8; font-size: 0.65rem;">1º WR</div>
+                                    <div style="font-weight: 800; color: #60A5FA;">@a.FirstWinRate%</div>
+                                </div>
+                                <div>
+                                    <div style="color: #94A3B8; font-size: 0.65rem;">2º WR</div>
+                                    <div style="font-weight: 800; color: #C084FC;">@a.SecondWinRate%</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        }
+
+        <!-- TAB 4: TELEMETRIA AVANÇADA -->
+        @if (activeTab == "telemetry" && telemetry != null)
+        {
+            <!-- Cara ou Coroa -->
+            <div class="battle-card">
+                <div class="card-header-title">
+                    <span>🪙 Impacto do Cara ou Coroa Inicial</span>
+                </div>
+                <div class="stats-grid" style="margin-bottom: 0;">
+                    <div class="stat-box">
+                        <div class="stat-value" style="color: #34D399;">@telemetry.CoinFlip.WonCoinFlipWinRate%</div>
+                        <div class="stat-label">Venceu a Moeda</div>
+                        <div style="font-size: 0.7rem; color: #94A3B8;">@telemetry.CoinFlip.WonCoinFlipWins V de @telemetry.CoinFlip.WonCoinFlipCount jg</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" style="color: #F87171;">@telemetry.CoinFlip.LostCoinFlipWinRate%</div>
+                        <div class="stat-label">Perdeu a Moeda</div>
+                        <div style="font-size: 0.7rem; color: #94A3B8;">@telemetry.CoinFlip.LostCoinFlipWins V de @telemetry.CoinFlip.LostCoinFlipCount jg</div>
+                    </div>
+                </div>
+                <div style="text-align: center; margin-top: 8px; font-size: 0.8rem; color: #CBD5E1;">
+                    Vantagem de vencer a moeda: <strong style="color: #EAB308;">+@telemetry.CoinFlip.CoinFlipAdvantageDelta% WR</strong>
+                </div>
+            </div>
+
+            <!-- Média de Prêmios em Derrotas (Parelhas vs Atropelos) -->
+            <div class="battle-card">
+                <div class="card-header-title">
+                    <span>🎯 Resistência em Derrotas</span>
+                    <span style="font-size: 0.75rem; color: #F59E0B; font-weight: 700;">@telemetry.PrizeLosses.AvgPrizesTakenInLosses Prêmios/Derrota</span>
+                </div>
+                <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 10px;">
+                    Média de prêmios comprados quando perde (mostra se as derrotas foram disputadas ou atropelos).
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center;">
+                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 8px;">
+                        <div style="font-weight: 900; font-size: 1.1rem; color: #34D399;">@telemetry.PrizeLosses.CloseLossesCount</div>
+                        <div style="font-size: 0.65rem; color: #94A3B8;">Parelhas (4-5 prêmios)</div>
+                    </div>
+                    <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 8px;">
+                        <div style="font-weight: 900; font-size: 1.1rem; color: #FBBF24;">@telemetry.PrizeLosses.ModerateLossesCount</div>
+                        <div style="font-size: 0.65rem; color: #94A3B8;">Médias (2-3 prêmios)</div>
+                    </div>
+                    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 8px;">
+                        <div style="font-weight: 900; font-size: 1.1rem; color: #F87171;">@telemetry.PrizeLosses.BlowoutLossesCount</div>
+                        <div style="font-size: 0.65rem; color: #94A3B8;">Atropelos (0-1 prêmio)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Correlação de Mulligans -->
+            <div class="battle-card">
+                <div class="card-header-title">
+                    <span>🔄 Correlação de Mulligans</span>
+                    <span style="font-size: 0.75rem; color: #94A3B8;">Média: @telemetry.Mulligans.AvgPlayerMulligans</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center;">
+                    <div class="stat-box" style="padding: 8px;">
+                        <div style="font-weight: 900; font-size: 1.05rem; color: #34D399;">@telemetry.Mulligans.ZeroMulliganWinRate%</div>
+                        <div style="font-size: 0.65rem; color: #94A3B8;">0 Mulligans (@telemetry.Mulligans.ZeroMulliganMatches jg)</div>
+                    </div>
+                    <div class="stat-box" style="padding: 8px;">
+                        <div style="font-weight: 900; font-size: 1.05rem; color: #FBBF24;">@telemetry.Mulligans.OneMulliganWinRate%</div>
+                        <div style="font-size: 0.65rem; color: #94A3B8;">1 Mulligan (@telemetry.Mulligans.OneMulliganMatches jg)</div>
+                    </div>
+                    <div class="stat-box" style="padding: 8px;">
+                        <div style="font-weight: 900; font-size: 1.05rem; color: #F87171;">@telemetry.Mulligans.TwoOrMoreMulligansWinRate%</div>
+                        <div style="font-size: 0.65rem; color: #94A3B8;">2+ Mulligans (@telemetry.Mulligans.TwoOrMoreMulligansMatches jg)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Impacto de Tech Cards -->
+            @if (telemetry.TechCardImpacts.Count > 0)
+            {
+                <div class="battle-card">
+                    <div class="card-header-title">
+                        <span>🧪 Impacto de Tech Cards no Win Rate</span>
+                    </div>
+                    @foreach (var tech in telemetry.TechCardImpacts)
+                    {
+                        <div class="matrix-row">
+                            <div>
+                                <div style="font-weight: 700; font-size: 0.9rem; color: #F8FAFC;">@tech.TechCardName</div>
+                                <div style="font-size: 0.75rem; color: #94A3B8;">
+                                    Com: @tech.WinRateWithCard% (@tech.MatchesWithCard jg) | Sem: @tech.WinRateWithoutCard% (@tech.MatchesWithoutCard jg)
+                                </div>
+                            </div>
+                            <div style="font-weight: 900; font-size: 1.05rem; color: @(tech.ImpactDelta >= 0 ? "#34D399" : "#F87171");">
+                                @(tech.ImpactDelta >= 0 ? "+" : "")@tech.ImpactDelta%
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <!-- Condições de Término -->
+            @if (telemetry.WinConditions.Count > 0)
+            {
+                <div class="battle-card">
+                    <div class="card-header-title">
+                        <span>🏁 Distribuição de Condições de Término</span>
+                    </div>
+                    @foreach (var cond in telemetry.WinConditions)
+                    {
+                        <div class="matrix-row" style="padding: 8px 12px;">
+                            <div style="font-size: 0.85rem; font-weight: 600; color: #F1F5F9;">@cond.ConditionName</div>
+                            <div style="font-size: 0.85rem; font-weight: 800; color: #818CF8;">
+                                @cond.Count (@cond.Percentage%)
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    }
+</div>
+
+@code {
+    private string activeTab = "overview";
+    private string selectedDeckFilter = "";
+    private bool isLoading = true;
+
+    private List<DeckResponse> decks = new();
+    private OverviewMetricsDto? overview;
+    private List<MatchupMatrixItemDto> matchups = new();
+    private InitiativeMetricsDto? initiative;
+    private AdvancedTelemetryDto? telemetry;
+
+    protected override async Task OnInitializedAsync()
+    {
+        decks = await ClientService.GetDecksAsync();
+        await LoadMetricsAsync();
+    }
+
+    private async Task LoadMetricsAsync()
+    {
+        isLoading = true;
+        Guid? deckId = Guid.TryParse(selectedDeckFilter, out var id) ? id : null;
+
+        overview = await ClientService.GetOverviewMetricsAsync(deckId);
+        matchups = await ClientService.GetMatchupMatrixAsync(deckId);
+        initiative = await ClientService.GetInitiativeMetricsAsync(deckId);
+        telemetry = await ClientService.GetAdvancedTelemetryAsync(deckId);
+
+        isLoading = false;
+    }
+}
