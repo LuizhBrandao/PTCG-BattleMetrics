@@ -1,10 +1,10 @@
-# ⚡ PTCG Battle Metrics
+#  PTCG Battle Metrics
 
-> Progressive Web App (PWA) Mobile-First em **.NET 9 / C#** (Zero Node.js) voltada para jogadores competitivos de Pokémon TCG rastrearem histórico de partidas, torneios e análise profunda de métricas.
+> Progressive Web App (PWA) Mobile-First em **.NET 9 / C#** voltada para jogadores competitivos de Pokémon TCG rastrearem histórico de partidas, torneios e análise profunda de métricas.
 
 ---
 
-## 📱 Recursos Principais
+##  Recursos Principais
 
 ### 1. Modo Torneio (Fast Input em < 10 segundos)
 - Registro rápido de rodada entre jogos com **apenas 3 campos obrigatórios**:
@@ -34,9 +34,9 @@
 - **Visão Geral:** Win Rate geral, Win Rate sem empates, agrupado por deck e por formato.
 - **Impacto de Iniciativa:** Win Rate começando em 1º vs 2º (geral e discriminado por arquétipo).
 - **Matriz de Matchups:** Tabela dinâmica categorizada com badges:
-  - 🟢 **Favorável** ($\ge 55\%$)
-  - 🟡 **Neutro** ($45\text{-}55\%$)
-  - 🔴 **Desfavorável** ($< 45\%$)
+  -  **Favorável** ($\ge 55\%$)
+  -  **Neutro** ($45\text{-}55\%$)
+  -  **Desfavorável** ($< 45\%$)
   - Média de prêmios comprados por confronto e WR de iniciativa por matchup.
 - **Telemetria Avançada:**
   - Vantagem de vencer o cara-ou-coroa inicial.
@@ -52,7 +52,7 @@
 
 ---
 
-## 🏗️ Arquitetura (Clean Architecture & Zero Node.js)
+##  Arquitetura (Clean Architecture)
 
 - **Backend:** C# / .NET 9 (ASP.NET Core Minimal APIs + Swagger UI).
 - **Frontend:** Blazor WebAssembly PWA (C# nativo no navegador via WebAssembly).
@@ -73,7 +73,7 @@ PTCGBattleMetrics/
 
 ---
 
-## 🚀 Como Executar
+##  Como Executar
 
 ### Pré-requisitos
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) (ou superior).
