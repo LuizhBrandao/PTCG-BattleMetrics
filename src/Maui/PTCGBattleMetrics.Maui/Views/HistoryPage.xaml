@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PTCGBattleMetrics.Maui.ViewModels"
+             xmlns:dto="clr-namespace:PTCGBattleMetrics.Application.DTOs;assembly=PTCGBattleMetrics.Application"
+             x:Class="PTCGBattleMetrics.Maui.Views.HistoryPage"
+             x:DataType="vm:HistoryViewModel"
+             Title="📜 Histórico"
+             BackgroundColor="#0B0F19">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="14" Padding="16,12,16,24" MaximumWidthRequest="700">
+
+            <!-- Barra de Busca -->
+            <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 12" Padding="12,4">
+                <Grid ColumnDefinitions="Auto, *">
+                    <Label Text="🔍" FontSize="14" VerticalTextAlignment="Center" Margin="0,0,8,0" Grid.Column="0" />
+                    <Entry Text="{Binding SearchTerm}"
+                           Placeholder="Buscar por arquétipo, deck ou oponente..."
+                           PlaceholderColor="#64748B"
+                           TextColor="#F8FAFC"
+                           Grid.Column="1" />
+                </Grid>
+            </Border>
+
+            <!-- Lista de Partidas -->
+            <CollectionView ItemsSource="{Binding Matches}">
+                <CollectionView.EmptyView>
+                    <Label Text="Nenhuma partida encontrada no histórico."
+                           TextColor="#64748B" HorizontalTextAlignment="Center" Margin="0,40" />
+                </CollectionView.EmptyView>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="dto:MatchResponse">
+                        <Border Stroke="#2D3B55" StrokeThickness="1" BackgroundColor="#151D2F"
+                                StrokeShape="RoundRectangle 12" Padding="14" Margin="0,0,0,10">
+                            <VerticalStackLayout Spacing="8">
+                                <Grid ColumnDefinitions="Auto, *, Auto">
+                                    <Label Text="{Binding Result}"
+                                           FontSize="13"
+                                           FontAttributes="Bold"
+                                           TextColor="#34D399"
+                                           VerticalTextAlignment="Center"
+                                           Margin="0,0,10,0"
+                                           Grid.Column="0" />
+
+                                    <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                        <Label Text="{Binding OpponentArchetype, StringFormat='vs {0}'}" FontSize="15" FontAttributes="Bold" TextColor="#F8FAFC" />
+                                        <Label Text="{Binding DeckName, StringFormat='Meu Deck: {0}'}" FontSize="12" TextColor="#818CF8" />
+                                    </VerticalStackLayout>
+
+                                    <Label Text="{Binding CreatedAt, StringFormat='{0:dd/MM HH:mm}'}" FontSize="11" TextColor="#64748B" Grid.Column="2" />
+                                </Grid>
+
+                                <!-- Telemetria Chips -->
+                                <HorizontalStackLayout Spacing="10">
+                                    <Label Text="{Binding TurnOrder, StringFormat='Turno: {0}'}" FontSize="11" TextColor="#94A3B8" />
+                                    <Label Text="{Binding PlayerPrizesRemaining, StringFormat='Prêmios: {0} - '}" FontSize="11" TextColor="#94A3B8" />
+                                    <Label Text="{Binding OpponentPrizesRemaining}" FontSize="11" TextColor="#94A3B8" />
+                                    <Label Text="{Binding TournamentName, StringFormat='• {0}'}" FontSize="11" TextColor="#FBBF24" />
+                                </HorizontalStackLayout>
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

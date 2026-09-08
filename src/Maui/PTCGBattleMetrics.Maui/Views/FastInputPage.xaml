@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PTCGBattleMetrics.Maui.ViewModels"
+             xmlns:enums="clr-namespace:PTCGBattleMetrics.Domain.Enums;assembly=PTCGBattleMetrics.Domain"
+             xmlns:dto="clr-namespace:PTCGBattleMetrics.Application.DTOs;assembly=PTCGBattleMetrics.Application"
+             xmlns:entities="clr-namespace:PTCGBattleMetrics.Domain.Entities;assembly=PTCGBattleMetrics.Domain"
+             x:Class="PTCGBattleMetrics.Maui.Views.FastInputPage"
+             x:DataType="vm:FastInputViewModel"
+             Title="⚡ Torneio"
+             BackgroundColor="#0B0F19">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="14" Padding="16,12,16,24" MaximumWidthRequest="600">
+
+            <!-- Active Tournament Banner (if active) -->
+            <Border IsVisible="{Binding HasActiveTournament}"
+                    Stroke="#4F46E5" StrokeThickness="1" BackgroundColor="#1E1B4B"
+                    StrokeShape="RoundRectangle 12" Padding="12,10">
+                <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
+                    <Label Text="🏆 EVENTO ATIVO" FontSize="11" TextColor="#818CF8" FontAttributes="Bold" Grid.Row="0" Grid.Column="0" />
+                    <Label Text="{Binding ActiveTournament.Name}" FontSize="15" FontAttributes="Bold" TextColor="#F8FAFC" Grid.Row="1" Grid.Column="0" />
+                    
+                    <Label Text="RECORD" FontSize="11" TextColor="#94A3B8" HorizontalTextAlignment="End" Grid.Row="0" Grid.Column="1" />
+                    <Label Text="{Binding ActiveTournament.RecordDisplay}" FontSize="15" FontAttributes="Bold" TextColor="#34D399" HorizontalTextAlignment="End" Grid.Row="1" Grid.Column="1" />
+                </Grid>
+            </Border>
+
+            <!-- Card: Modo Torneio Fast Input (< 10s) -->
+            <Border Stroke="#2D3B55" StrokeThickness="1" BackgroundColor="#151D2F"
+                    StrokeShape="RoundRectangle 14" Padding="16">
+                <VerticalStackLayout Spacing="14">
+
+                    <!-- Header -->
+                    <Grid ColumnDefinitions="*, Auto">
+                        <Label Text="⚡ REGISTRO RÁPIDO" FontSize="14" FontAttributes="Bold" TextColor="#F8FAFC" Grid.Column="0" />
+                        <Label Text="3 CAMPOS" FontSize="11" FontAttributes="Bold" TextColor="#34D399" Grid.Column="1" />
+                    </Grid>
+
+                    <!-- Campo 1: Deck Utilizado -->
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="1. Deck Utilizado *" FontSize="12" FontAttributes="Bold" TextColor="#94A3B8" />
+                        <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 10" Padding="8,2">
+                            <Picker ItemsSource="{Binding Decks}"
+                                    ItemDisplayBinding="{Binding Name}"
+                                    SelectedItem="{Binding SelectedDeck}"
+                                    TextColor="#F8FAFC"
+                                    Title="Selecione o seu deck" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Campo 2: Arquétipo Enfrentado -->
+                    <VerticalStackLayout Spacing="6">
+                        <Grid ColumnDefinitions="*, Auto">
+                            <Label Text="2. Arquétipo Enfrentado *" FontSize="12" FontAttributes="Bold" TextColor="#94A3B8" Grid.Column="0" />
+                            <Label Text="Toque em um chip" FontSize="11" TextColor="#818CF8" Grid.Column="1" />
+                        </Grid>
+
+                        <!-- Horizontal Scroller de Chips -->
+                        <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                            <HorizontalStackLayout Spacing="8" BindableLayout.ItemsSource="{Binding MetaArchetypes}">
+                                <BindableLayout.ItemTemplate>
+                                    <DataTemplate x:DataType="entities:MetaArchetype">
+                                        <Button Text="{Binding Name}"
+                                                FontSize="12"
+                                                FontAttributes="Bold"
+                                                CornerRadius="20"
+                                                HeightRequest="38"
+                                                Padding="12,0"
+                                                BackgroundColor="#1E293B"
+                                                TextColor="#F8FAFC"
+                                                BorderColor="#334155"
+                                                BorderWidth="1"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:FastInputViewModel}}, Path=SelectArchetypeCommand}"
+                                                CommandParameter="{Binding Name}" />
+                                    </DataTemplate>
+                                </BindableLayout.ItemTemplate>
+                            </HorizontalStackLayout>
+                        </ScrollView>
+
+                        <!-- Entrada de texto do Arquétipo -->
+                        <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 10" Padding="12,0">
+                            <Entry Text="{Binding SelectedArchetype}"
+                                   Placeholder="Ou digite o arquétipo adversário..."
+                                   PlaceholderColor="#64748B"
+                                   TextColor="#F8FAFC"
+                                   HeightRequest="46" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Campo 3: Resultado (3 botões grandes) -->
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="3. Resultado da Partida *" FontSize="12" FontAttributes="Bold" TextColor="#94A3B8" />
+                        
+                        <Grid ColumnDefinitions="*, *, *" ColumnSpacing="8">
+                            <!-- Vitória -->
+                            <Button Grid.Column="0"
+                                    Text="🏆 VITÓRIA"
+                                    FontAttributes="Bold"
+                                    FontSize="13"
+                                    HeightRequest="56"
+                                    CornerRadius="12"
+                                    BackgroundColor="#10B981"
+                                    TextColor="#022C22"
+                                    Command="{Binding SetResultCommand}">
+                                <Button.CommandParameter>
+                                    <enums:MatchResult>Win</enums:MatchResult>
+                                </Button.CommandParameter>
+                            </Button>
+
+                            <!-- Derrota -->
+                            <Button Grid.Column="1"
+                                    Text="❌ DERROTA"
+                                    FontAttributes="Bold"
+                                    FontSize="13"
+                                    HeightRequest="56"
+                                    CornerRadius="12"
+                                    BackgroundColor="#EF4444"
+                                    TextColor="#450A0A"
+                                    Command="{Binding SetResultCommand}">
+                                <Button.CommandParameter>
+                                    <enums:MatchResult>Loss</enums:MatchResult>
+                                </Button.CommandParameter>
+                            </Button>
+
+                            <!-- Empate -->
+                            <Button Grid.Column="2"
+                                    Text="⚖️ EMPATE"
+                                    FontAttributes="Bold"
+                                    FontSize="13"
+                                    HeightRequest="56"
+                                    CornerRadius="12"
+                                    BackgroundColor="#F59E0B"
+                                    TextColor="#451A03"
+                                    Command="{Binding SetResultCommand}">
+                                <Button.CommandParameter>
+                                    <enums:MatchResult>Tie</enums:MatchResult>
+                                </Button.CommandParameter>
+                            </Button>
+                        </Grid>
+
+                        <Label Text="{Binding SelectedResult, StringFormat='Resultado selecionado: {0}'}" 
+                               FontSize="12" TextColor="#CBD5E1" HorizontalTextAlignment="Center" Margin="0,4,0,0" />
+                    </VerticalStackLayout>
+
+                    <!-- Progressive Disclosure: Telemetria Detalhada -->
+                    <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 10" Padding="12">
+                        <VerticalStackLayout Spacing="10">
+                            <Button Text="📈 Telemetria Detalhada da Partida"
+                                    FontSize="13"
+                                    FontAttributes="Bold"
+                                    BackgroundColor="Transparent"
+                                    TextColor="#818CF8"
+                                    Command="{Binding ToggleTelemetryCommand}" />
+
+                            <!-- Conteúdo Expansível -->
+                            <VerticalStackLayout Spacing="12" IsVisible="{Binding ShowTelemetry}">
+
+                                <!-- Rodada & Mesa -->
+                                <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                        <Label Text="Rodada (Round)" FontSize="11" TextColor="#94A3B8" />
+                                        <Entry Text="{Binding RoundNumber}" Keyboard="Numeric" Placeholder="ex: 1" TextColor="#F8FAFC" BackgroundColor="#151D2F" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                        <Label Text="Número da Mesa" FontSize="11" TextColor="#94A3B8" />
+                                        <Entry Text="{Binding TableNumber}" Keyboard="Numeric" Placeholder="ex: 14" TextColor="#F8FAFC" BackgroundColor="#151D2F" />
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <!-- Adversário & POP ID -->
+                                <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                        <Label Text="Nome Adversário" FontSize="11" TextColor="#94A3B8" />
+                                        <Entry Text="{Binding OpponentName}" Placeholder="ex: Ash Ketchum" TextColor="#F8FAFC" BackgroundColor="#151D2F" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                        <Label Text="POP ID" FontSize="11" TextColor="#94A3B8" />
+                                        <Entry Text="{Binding OpponentPopId}" Placeholder="ex: 123456" TextColor="#F8FAFC" BackgroundColor="#151D2F" />
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <!-- Cara ou Coroa & Ordem de Turno -->
+                                <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                        <Label Text="Cara ou Coroa" FontSize="11" TextColor="#94A3B8" />
+                                        <Grid ColumnDefinitions="*, *" ColumnSpacing="4">
+                                            <Button Grid.Column="0" Text="Venceu" FontSize="11" HeightRequest="38" BackgroundColor="#1E1B4B" TextColor="#818CF8" Clicked="OnCoinWonClicked" />
+                                            <Button Grid.Column="1" Text="Perdeu" FontSize="11" HeightRequest="38" BackgroundColor="#1E1B4B" TextColor="#F87171" Clicked="OnCoinLostClicked" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+
+                                    <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                        <Label Text="Ordem de Turno" FontSize="11" TextColor="#94A3B8" />
+                                        <Grid ColumnDefinitions="*, *" ColumnSpacing="4">
+                                            <Button Grid.Column="0" Text="1º" FontSize="11" HeightRequest="38" BackgroundColor="#1E1B4B" TextColor="#60A5FA" Clicked="OnFirstClicked" />
+                                            <Button Grid.Column="1" Text="2º" FontSize="11" HeightRequest="38" BackgroundColor="#1E1B4B" TextColor="#C084FC" Clicked="OnSecondClicked" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <!-- Mulligans: Jogador vs Oponente -->
+                                <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                        <Label Text="{Binding PlayerMulligans, StringFormat='Meus Mulligans: {0}'}" FontSize="11" TextColor="#94A3B8" />
+                                        <Grid ColumnDefinitions="Auto, *, Auto">
+                                            <Button Text="-" Command="{Binding DecrementPlayerMulligansCommand}" WidthRequest="38" HeightRequest="38" BackgroundColor="#151D2F" TextColor="#F8FAFC" Grid.Column="0" />
+                                            <Label Text="{Binding PlayerMulligans}" HorizontalTextAlignment="Center" VerticalTextAlignment="Center" FontAttributes="Bold" TextColor="#F8FAFC" Grid.Column="1" />
+                                            <Button Text="+" Command="{Binding IncrementPlayerMulligansCommand}" WidthRequest="38" HeightRequest="38" BackgroundColor="#151D2F" TextColor="#F8FAFC" Grid.Column="2" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+
+                                    <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                        <Label Text="{Binding OpponentMulligans, StringFormat='Mulligans Oponente: {0}'}" FontSize="11" TextColor="#94A3B8" />
+                                        <Grid ColumnDefinitions="Auto, *, Auto">
+                                            <Button Text="-" Command="{Binding DecrementOpponentMulligansCommand}" WidthRequest="38" HeightRequest="38" BackgroundColor="#151D2F" TextColor="#F8FAFC" Grid.Column="0" />
+                                            <Label Text="{Binding OpponentMulligans}" HorizontalTextAlignment="Center" VerticalTextAlignment="Center" FontAttributes="Bold" TextColor="#F8FAFC" Grid.Column="1" />
+                                            <Button Text="+" Command="{Binding IncrementOpponentMulligansCommand}" WidthRequest="38" HeightRequest="38" BackgroundColor="#151D2F" TextColor="#F8FAFC" Grid.Column="2" />
+                                        </Grid>
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <!-- Prêmios Restantes -->
+                                <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="4">
+                                        <Label Text="Meus Prêmios Restantes" FontSize="11" TextColor="#94A3B8" />
+                                        <Entry Text="{Binding PlayerPrizesRemaining}" Keyboard="Numeric" TextColor="#F8FAFC" BackgroundColor="#151D2F" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1" Spacing="4">
+                                        <Label Text="Prêmios Rest. Oponente" FontSize="11" TextColor="#94A3B8" />
+                                        <Entry Text="{Binding OpponentPrizesRemaining}" Keyboard="Numeric" TextColor="#F8FAFC" BackgroundColor="#151D2F" />
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <!-- Pokémon Ativo Inicial -->
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Pokémon Ativo Inicial" FontSize="11" TextColor="#94A3B8" />
+                                    <Entry Text="{Binding StartingActivePokemon}" Placeholder="ex: Charmander, Rotom V..." TextColor="#F8FAFC" BackgroundColor="#151D2F" />
+                                </VerticalStackLayout>
+
+                                <!-- Anotações Táticas -->
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Anotações Táticas" FontSize="11" TextColor="#94A3B8" />
+                                    <Editor Text="{Binding TacticalNotes}" HeightRequest="60" Placeholder="Erros de sequenciamento, cartas prizadas..." TextColor="#F8FAFC" BackgroundColor="#151D2F" />
+                                </VerticalStackLayout>
+
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- Botão Salvar Partida (< 10s) -->
+                    <Button Text="⚡ Salvar Partida (&lt; 10s)"
+                            FontSize="15"
+                            FontAttributes="Bold"
+                            HeightRequest="52"
+                            CornerRadius="12"
+                            BackgroundColor="#4F46E5"
+                            TextColor="#F8FAFC"
+                            Command="{Binding SaveMatchCommand}"
+                            IsEnabled="{Binding IsNotBusy}" />
+
+                    <!-- Feedback status -->
+                    <Label Text="{Binding StatusMessage}"
+                           IsVisible="{Binding HasStatusMessage}"
+                           TextColor="#34D399"
+                           FontAttributes="Bold"
+                           FontSize="12"
+                           HorizontalTextAlignment="Center" />
+
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

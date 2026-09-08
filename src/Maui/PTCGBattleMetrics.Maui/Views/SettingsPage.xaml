@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PTCGBattleMetrics.Maui.ViewModels"
+             x:Class="PTCGBattleMetrics.Maui.Views.SettingsPage"
+             x:DataType="vm:SettingsViewModel"
+             Title="⚙️ Configurações"
+             BackgroundColor="#0B0F19">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="16" Padding="16,16,16,28" MaximumWidthRequest="650">
+
+            <!-- Cabeçalho -->
+            <VerticalStackLayout Spacing="2">
+                <Label Text="CONFIGURAÇÕES" FontSize="18" FontAttributes="Bold" TextColor="#F8FAFC" />
+                <Label Text="Conexão do servidor e sincronização offline" FontSize="12" TextColor="#94A3B8" />
+            </VerticalStackLayout>
+
+            <!-- Card: Endpoint do Servidor API -->
+            <Border Stroke="#2D3B55" StrokeThickness="1" BackgroundColor="#151D2F"
+                    StrokeShape="RoundRectangle 14" Padding="16">
+                <VerticalStackLayout Spacing="14">
+                    <Label Text="🌐 SERVIDOR DE SINCRONIZAÇÃO" FontSize="13" FontAttributes="Bold" TextColor="#818CF8" />
+
+                    <VerticalStackLayout Spacing="6">
+                        <Label Text="URL da API (REST Backend)" FontSize="12" TextColor="#94A3B8" />
+                        <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 8" Padding="10,0">
+                            <Entry Text="{Binding ApiEndpoint}"
+                                   Placeholder="http://192.168.15.92:5016"
+                                   Keyboard="Url"
+                                   TextColor="#F8FAFC"
+                                   HeightRequest="42" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Toggle Forçar Offline -->
+                    <Grid ColumnDefinitions="*, Auto">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                            <Label Text="Modo Somente Offline" FontSize="13" FontAttributes="Bold" TextColor="#F8FAFC" />
+                            <Label Text="Armazena dados apenas localmente" FontSize="11" TextColor="#64748B" />
+                        </VerticalStackLayout>
+                        <Switch IsToggled="{Binding OfflineMode}" Grid.Column="1" />
+                    </Grid>
+
+                    <!-- Ações de Conexão -->
+                    <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                        <Button Grid.Column="0"
+                                Text="Testar Conexão"
+                                FontSize="13"
+                                FontAttributes="Bold"
+                                HeightRequest="44"
+                                CornerRadius="10"
+                                BackgroundColor="#1E1B4B"
+                                TextColor="#818CF8"
+                                BorderColor="#4F46E5"
+                                BorderWidth="1"
+                                Command="{Binding TestConnectionCommand}"
+                                IsEnabled="{Binding IsNotBusy}" />
+
+                        <Button Grid.Column="1"
+                                Text="Salvar Alterações"
+                                FontSize="13"
+                                FontAttributes="Bold"
+                                HeightRequest="44"
+                                CornerRadius="10"
+                                BackgroundColor="#4F46E5"
+                                TextColor="#F8FAFC"
+                                Command="{Binding SaveSettingsCommand}"
+                                IsEnabled="{Binding IsNotBusy}" />
+                    </Grid>
+
+                    <!-- Status de Conexão -->
+                    <Border IsVisible="{Binding HasConnectionStatus}"
+                            Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 10" Padding="12">
+                        <Label Text="{Binding ConnectionStatus}"
+                               TextColor="#34D399"
+                               FontSize="12"
+                               FontAttributes="Bold"
+                               HorizontalTextAlignment="Center" />
+                    </Border>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Card: Sincronização e Fila Offline -->
+            <Border Stroke="#2D3B55" StrokeThickness="1" BackgroundColor="#151D2F"
+                    StrokeShape="RoundRectangle 14" Padding="16">
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="🔄 FILA OFFLINE-FIRST" FontSize="13" FontAttributes="Bold" TextColor="#818CF8" />
+
+                    <Grid ColumnDefinitions="*, Auto">
+                        <Label Text="Partidas Pendentes de Sincronização:" FontSize="13" TextColor="#CBD5E1" VerticalTextAlignment="Center" Grid.Column="0" />
+                        <Label Text="{Binding PendingSyncCount}" FontSize="18" FontAttributes="Bold" TextColor="#FBBF24" VerticalTextAlignment="Center" Grid.Column="1" />
+                    </Grid>
+
+                    <Button Text="Sincronizar Partidas Agora"
+                            FontSize="13"
+                            FontAttributes="Bold"
+                            HeightRequest="44"
+                            CornerRadius="10"
+                            BackgroundColor="#10B981"
+                            TextColor="#022C22"
+                            Command="{Binding SyncPendingMatchesCommand}"
+                            IsEnabled="{Binding IsNotBusy}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Card: Informações da Arquitetura -->
+            <Border Stroke="#2D3B55" BackgroundColor="#151D2F" StrokeShape="RoundRectangle 14" Padding="16">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="📱 ARQUITETURA CORPORATIVA" FontSize="12" FontAttributes="Bold" TextColor="#94A3B8" />
+                    <Label Text="PTCG Battle Metrics - .NET MAUI 9 Native" FontSize="13" FontAttributes="Bold" TextColor="#F8FAFC" />
+                    <Label Text="Baseado em 'Enterprise Application Patterns using .NET MAUI' (Microsoft)" FontSize="11" TextColor="#818CF8" />
+                    <Label Text="• MVVM Toolkit com observabilidade reativa&#10;• Injeção de Dependências nativa&#10;• Comunicação desacoplada via WeakReferenceMessenger&#10;• Validação de regras e persistência de preferências" FontSize="11" TextColor="#64748B" Margin="0,4,0,0" />
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -11,7 +11,15 @@ public record OverviewMetricsDto(
     double NonTieWinRate,
     List<DeckPerformanceDto> DecksPerformance,
     List<FormatPerformanceDto> FormatsPerformance
-);
+)
+{
+    public double WinRatePercent => OverallWinRate;
+    public int Wins => TotalWins;
+    public int Losses => TotalLosses;
+    public int Ties => TotalTies;
+    public int FavorableMatchupsCount => DecksPerformance.Count(d => d.WinRate >= 55.0);
+    public int UnfavorableMatchupsCount => DecksPerformance.Count(d => d.WinRate <= 45.0);
+}
 
 public record DeckPerformanceDto(
     Guid DeckId,
@@ -45,7 +53,13 @@ public record InitiativeMetricsDto(
     int SecondTies,
     double SecondWinRate,
     List<ArchetypeInitiativeDto> ArchetypeInitiatives
-);
+)
+{
+    public double GoingFirstWinRate => FirstWinRate;
+    public int GoingFirstCount => FirstTotal;
+    public double GoingSecondWinRate => SecondWinRate;
+    public int GoingSecondCount => SecondTotal;
+}
 
 public record ArchetypeInitiativeDto(
     string Archetype,
@@ -67,7 +81,19 @@ public record MatchupMatrixItemDto(
     double AvgOpponentPrizesTaken,
     double GoingFirstWinRate,
     double GoingSecondWinRate
-);
+)
+{
+    public double WinRatePercent => WinRate;
+    public int TotalMatches => Matches;
+    public string RecordDisplay => $"{Wins}-{Losses}-{Ties}";
+    public string Status => Rating switch
+    {
+        MatchupRating.Favorable => "Favorável",
+        MatchupRating.Neutral => "Neutro",
+        MatchupRating.Unfavorable => "Desfavorável",
+        _ => Rating.ToString()
+    };
+}
 
 public record AdvancedTelemetryDto(
     CoinFlipMetricsDto CoinFlip,

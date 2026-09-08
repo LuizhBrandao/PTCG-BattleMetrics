@@ -21,7 +21,10 @@ public record PtcglParseResult(
     int EnergyCount,
     List<CardDto> Cards,
     List<string> SuggestedTechCards
-);
+)
+{
+    public int TotalCount => TotalCards;
+}
 
 public record CreateDeckRequest(
     string Name,
@@ -44,7 +47,10 @@ public record DeckResponse(
     DateTimeOffset CreatedAt,
     List<string> TechCards,
     List<CardDto> Cards
-);
+)
+{
+    public int CardCount => TotalCards;
+}
 
 public record CreateGameDetailRequest(
     int GameNumber,
@@ -138,7 +144,10 @@ public record TournamentResponse(
     int MatchPoints,
     string RecordDisplay,
     int MatchesCount
-);
+)
+{
+    public int TotalMatches => MatchesCount;
+}
 
 public record SyncBatchRequest(
     List<CreateMatchRequest> OfflineMatches

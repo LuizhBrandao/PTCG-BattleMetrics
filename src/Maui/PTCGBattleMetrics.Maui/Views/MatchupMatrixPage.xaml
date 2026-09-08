@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:PTCGBattleMetrics.Maui.ViewModels"
+             xmlns:dto="clr-namespace:PTCGBattleMetrics.Application.DTOs;assembly=PTCGBattleMetrics.Application"
+             x:Class="PTCGBattleMetrics.Maui.Views.MatchupMatrixPage"
+             x:DataType="vm:MatchupMatrixViewModel"
+             Title="📊 Métricas"
+             BackgroundColor="#0B0F19">
+
+    <ScrollView>
+        <VerticalStackLayout Spacing="14" Padding="16,12,16,24" MaximumWidthRequest="700">
+
+            <!-- Filtro de Deck -->
+            <Border Stroke="#2D3B55" StrokeThickness="1" BackgroundColor="#151D2F"
+                    StrokeShape="RoundRectangle 12" Padding="12,8">
+                <Grid ColumnDefinitions="Auto, *">
+                    <Label Text="Filtrar por Deck:" FontSize="12" FontAttributes="Bold" TextColor="#94A3B8" VerticalTextAlignment="Center" Margin="0,0,10,0" Grid.Column="0" />
+                    <Picker ItemsSource="{Binding Decks}"
+                            ItemDisplayBinding="{Binding Name}"
+                            SelectedItem="{Binding SelectedDeckFilter}"
+                            TextColor="#F8FAFC"
+                            Title="Todos os Decks"
+                            Grid.Column="1" />
+                </Grid>
+            </Border>
+
+            <!-- Abas de Navegação (Segmented Control) -->
+            <Grid ColumnDefinitions="*, *, *, *" ColumnSpacing="6">
+                <Button Grid.Column="0" Text="Geral" FontSize="11" FontAttributes="Bold" HeightRequest="38" CornerRadius="8"
+                        BackgroundColor="#312E81" TextColor="#F8FAFC"
+                        Command="{Binding SetActiveTabCommand}" CommandParameter="Overview" />
+                <Button Grid.Column="1" Text="Matchups" FontSize="11" FontAttributes="Bold" HeightRequest="38" CornerRadius="8"
+                        BackgroundColor="#1E293B" TextColor="#F8FAFC"
+                        Command="{Binding SetActiveTabCommand}" CommandParameter="Matrix" />
+                <Button Grid.Column="2" Text="Iniciativa" FontSize="11" FontAttributes="Bold" HeightRequest="38" CornerRadius="8"
+                        BackgroundColor="#1E293B" TextColor="#F8FAFC"
+                        Command="{Binding SetActiveTabCommand}" CommandParameter="Initiative" />
+                <Button Grid.Column="3" Text="Telemetria" FontSize="11" FontAttributes="Bold" HeightRequest="38" CornerRadius="8"
+                        BackgroundColor="#1E293B" TextColor="#F8FAFC"
+                        Command="{Binding SetActiveTabCommand}" CommandParameter="Telemetry" />
+            </Grid>
+
+            <!-- 1. TAB: VISÃO GERAL -->
+            <VerticalStackLayout Spacing="12" IsVisible="{Binding IsOverviewTab}">
+                <!-- Card Principal: Taxa de Vitória Global -->
+                <Border Stroke="#312E81" BackgroundColor="#1E1B4B" StrokeShape="RoundRectangle 14" Padding="16">
+                    <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto, Auto">
+                        <Label Text="TAXA DE VITÓRIA GERAL" FontSize="11" FontAttributes="Bold" TextColor="#818CF8" Grid.Row="0" Grid.Column="0" />
+                        <Label Text="{Binding Overview.WinRatePercent, StringFormat='{0:F1}%'}" FontSize="36" FontAttributes="Bold" TextColor="#34D399" Grid.Row="1" Grid.Column="0" />
+                        <Label Text="{Binding Overview.TotalMatches, StringFormat='Total de {0} partidas analisadas'}" FontSize="12" TextColor="#94A3B8" Grid.Row="2" Grid.Column="0" />
+
+                        <VerticalStackLayout Grid.Row="1" Grid.Column="1" VerticalOptions="Center" Spacing="4">
+                            <Label Text="{Binding Overview.Wins, StringFormat='Vitórias: {0}'}" FontSize="12" TextColor="#34D399" FontAttributes="Bold" />
+                            <Label Text="{Binding Overview.Losses, StringFormat='Derrotas: {0}'}" FontSize="12" TextColor="#F87171" FontAttributes="Bold" />
+                            <Label Text="{Binding Overview.Ties, StringFormat='Empates: {0}'}" FontSize="12" TextColor="#FBBF24" FontAttributes="Bold" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </Border>
+
+                <!-- Status de Desempenho -->
+                <Border Stroke="#1E293B" BackgroundColor="#151D2F" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="📈 Resumo Competitivo" FontSize="13" FontAttributes="Bold" TextColor="#F8FAFC" />
+                        <Grid ColumnDefinitions="*, *" RowDefinitions="Auto, Auto" RowSpacing="10" ColumnSpacing="10">
+                            <Border Grid.Row="0" Grid.Column="0" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 8" Padding="10">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="Matchups Favoráveis" FontSize="11" TextColor="#94A3B8" />
+                                    <Label Text="{Binding Overview.FavorableMatchupsCount}" FontSize="18" FontAttributes="Bold" TextColor="#34D399" />
+                                </VerticalStackLayout>
+                            </Border>
+
+                            <Border Grid.Row="0" Grid.Column="1" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 8" Padding="10">
+                                <VerticalStackLayout Spacing="2">
+                                    <Label Text="Matchups Desfavoráveis" FontSize="11" TextColor="#94A3B8" />
+                                    <Label Text="{Binding Overview.UnfavorableMatchupsCount}" FontSize="18" FontAttributes="Bold" TextColor="#F87171" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- 2. TAB: MATCHUPS (MATRIZ) -->
+            <VerticalStackLayout Spacing="10" IsVisible="{Binding IsMatrixTab}">
+                <Label Text="MATRIZ DE CONFRONTOS (VS ARQUÉTIPOS)" FontSize="12" FontAttributes="Bold" TextColor="#94A3B8" />
+
+                <CollectionView ItemsSource="{Binding Matchups}">
+                    <CollectionView.EmptyView>
+                        <Label Text="Nenhum confronto registrado ainda." TextColor="#64748B" HorizontalTextAlignment="Center" Margin="0,20" />
+                    </CollectionView.EmptyView>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="dto:MatchupMatrixItemDto">
+                            <Border Stroke="#2D3B55" StrokeThickness="1" BackgroundColor="#151D2F"
+                                    StrokeShape="RoundRectangle 12" Padding="14" Margin="0,0,0,8">
+                                <Grid ColumnDefinitions="*, Auto" RowDefinitions="Auto, Auto">
+                                    <Label Text="{Binding OpponentArchetype}" FontSize="15" FontAttributes="Bold" TextColor="#F8FAFC" Grid.Row="0" Grid.Column="0" />
+                                    <Label Text="{Binding Status}" FontSize="11" FontAttributes="Bold" TextColor="#818CF8" Grid.Row="0" Grid.Column="1" />
+                                    
+                                    <HorizontalStackLayout Grid.Row="1" Grid.Column="0" Spacing="8" Margin="0,4,0,0">
+                                        <Label Text="{Binding RecordDisplay, StringFormat='Score: {0}'}" FontSize="12" TextColor="#94A3B8" />
+                                        <Label Text="{Binding TotalMatches, StringFormat='({0} jogos)'}" FontSize="12" TextColor="#64748B" />
+                                    </HorizontalStackLayout>
+
+                                    <Label Text="{Binding WinRatePercent, StringFormat='{0:F1}% WR'}" FontSize="14" FontAttributes="Bold" TextColor="#34D399" HorizontalTextAlignment="End" Grid.Row="1" Grid.Column="1" Margin="0,4,0,0" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+
+            <!-- 3. TAB: INICIATIVA (COIN FLIP & TURN ORDER) -->
+            <VerticalStackLayout Spacing="12" IsVisible="{Binding IsInitiativeTab}">
+                <!-- Cara ou Coroa -->
+                <Border Stroke="#2D3B55" BackgroundColor="#151D2F" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="🪙 CARA OU COROA (COIN FLIP)" FontSize="12" FontAttributes="Bold" TextColor="#818CF8" />
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                            <Border Grid.Column="0" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 10" Padding="12">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Quando Vence a Moeda" FontSize="11" TextColor="#94A3B8" />
+                                    <Label Text="{Binding Telemetry.CoinFlip.WonCoinFlipWinRate, StringFormat='{0:F1}% WR'}" FontSize="20" FontAttributes="Bold" TextColor="#34D399" />
+                                    <Label Text="{Binding Telemetry.CoinFlip.WonCoinFlipCount, StringFormat='{0} partidas'}" FontSize="11" TextColor="#64748B" />
+                                </VerticalStackLayout>
+                            </Border>
+                            <Border Grid.Column="1" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 10" Padding="12">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Quando Perde a Moeda" FontSize="11" TextColor="#94A3B8" />
+                                    <Label Text="{Binding Telemetry.CoinFlip.LostCoinFlipWinRate, StringFormat='{0:F1}% WR'}" FontSize="20" FontAttributes="Bold" TextColor="#F87171" />
+                                    <Label Text="{Binding Telemetry.CoinFlip.LostCoinFlipCount, StringFormat='{0} partidas'}" FontSize="11" TextColor="#64748B" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Ordem de Turno -->
+                <Border Stroke="#2D3B55" BackgroundColor="#151D2F" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="🔄 ORDEM DE TURNO (1º vs 2º)" FontSize="12" FontAttributes="Bold" TextColor="#818CF8" />
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                            <Border Grid.Column="0" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 10" Padding="12">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Jogando em 1º (Going First)" FontSize="11" TextColor="#94A3B8" />
+                                    <Label Text="{Binding Initiative.GoingFirstWinRate, StringFormat='{0:F1}% WR'}" FontSize="20" FontAttributes="Bold" TextColor="#60A5FA" />
+                                    <Label Text="{Binding Initiative.GoingFirstCount, StringFormat='{0} partidas'}" FontSize="11" TextColor="#64748B" />
+                                </VerticalStackLayout>
+                            </Border>
+                            <Border Grid.Column="1" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 10" Padding="12">
+                                <VerticalStackLayout Spacing="4">
+                                    <Label Text="Jogando em 2º (Going Second)" FontSize="11" TextColor="#94A3B8" />
+                                    <Label Text="{Binding Initiative.GoingSecondWinRate, StringFormat='{0:F1}% WR'}" FontSize="20" FontAttributes="Bold" TextColor="#C084FC" />
+                                    <Label Text="{Binding Initiative.GoingSecondCount, StringFormat='{0} partidas'}" FontSize="11" TextColor="#64748B" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+            <!-- 4. TAB: TELEMETRIA AVANÇADA -->
+            <VerticalStackLayout Spacing="12" IsVisible="{Binding IsTelemetryTab}">
+                <!-- Mulligans -->
+                <Border Stroke="#2D3B55" BackgroundColor="#151D2F" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="🃏 IMPACTO DE MULLIGANS" FontSize="12" FontAttributes="Bold" TextColor="#818CF8" />
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="Média Seus Mulligans" FontSize="11" TextColor="#94A3B8" />
+                                <Label Text="{Binding Telemetry.Mulligans.AvgPlayerMulligans, StringFormat='{0:F2}'}" FontSize="18" FontAttributes="Bold" TextColor="#F8FAFC" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                <Label Text="WR c/ 0 Mulligans" FontSize="11" TextColor="#94A3B8" />
+                                <Label Text="{Binding Telemetry.Mulligans.ZeroMulliganWinRate, StringFormat='{0:F1}%'}" FontSize="18" FontAttributes="Bold" TextColor="#34D399" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Prêmios -->
+                <Border Stroke="#2D3B55" BackgroundColor="#151D2F" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="🎁 DIFERENCIAL DE PRÊMIOS" FontSize="12" FontAttributes="Bold" TextColor="#818CF8" />
+                        <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                <Label Text="Média Prêmios em Derrotas" FontSize="11" TextColor="#94A3B8" />
+                                <Label Text="{Binding Telemetry.PrizeLosses.AvgPrizesTakenInLosses, StringFormat='{0:F2}'}" FontSize="18" FontAttributes="Bold" TextColor="#34D399" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                <Label Text="Derrotas Disputadas (4-5 prêmios)" FontSize="11" TextColor="#94A3B8" />
+                                <Label Text="{Binding Telemetry.PrizeLosses.CloseLossesCount, StringFormat='{0} jogos'}" FontSize="18" FontAttributes="Bold" TextColor="#FBBF24" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Tech Cards Impact -->
+                <Border Stroke="#2D3B55" BackgroundColor="#151D2F" StrokeShape="RoundRectangle 12" Padding="14">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="🎯 IMPACTO DE CARTAS TÉCNICAS (TECH CARDS)" FontSize="12" FontAttributes="Bold" TextColor="#818CF8" />
+                        <CollectionView ItemsSource="{Binding Telemetry.TechCardImpacts}">
+                            <CollectionView.EmptyView>
+                                <Label Text="Nenhuma carta técnica registrada ainda." TextColor="#64748B" Margin="0,10" />
+                            </CollectionView.EmptyView>
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="dto:TechCardImpactDto">
+                                    <Grid ColumnDefinitions="*, Auto, Auto" Margin="0,4">
+                                        <Label Text="{Binding TechCardName}" FontSize="13" TextColor="#F8FAFC" Grid.Column="0" />
+                                        <Label Text="{Binding MatchesWithCard, StringFormat='{0}x usados'}" FontSize="11" TextColor="#94A3B8" Grid.Column="1" Margin="0,0,12,0" />
+                                        <Label Text="{Binding WinRateWithCard, StringFormat='{0:F1}% WR'}" FontSize="12" FontAttributes="Bold" TextColor="#34D399" Grid.Column="2" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
