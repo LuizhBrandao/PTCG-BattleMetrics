@@ -6,4 +6,5 @@ public interface ISettingsService
     Guid? ActiveDeckId { get; set; }
     Guid? ActiveTournamentId { get; set; }
     bool OfflineMode { get; set; }
+    string? LastFacedArchetype { get; set; }
 }

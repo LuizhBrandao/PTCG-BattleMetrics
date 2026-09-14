@@ -11,29 +11,26 @@ public static class DbInitializer
     {
         await context.Database.EnsureCreatedAsync();
 
-        // Seed Meta Archetypes if empty
-        if (!await context.MetaArchetypes.AnyAsync())
+        // Seed or update Meta Archetypes with Limitless TCG Top 10
+        var existingArchetypes = await context.MetaArchetypes.ToListAsync();
+        var limitlessTop10Names = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            var metaArchetypes = new List<MetaArchetype>
+            "Dragapult", "Mega Excadrill", "Alakazam", "Slowking", "N's Zoroark",
+            "Festival Lead", "Dhelmise", "Marnie's Grimmsnarl", "Mega Lucario", "Toucannon"
+        };
+
+        bool needsReseed = existingArchetypes.Count != limitlessTop10Names.Count ||
+                           existingArchetypes.Any(a => !limitlessTop10Names.Contains(a.Name));
+
+        if (needsReseed)
+        {
+            if (existingArchetypes.Count > 0)
             {
-                new() { Name = "Charizard ex", PrimaryType = "Fire", ColorHex = "#EF4444", Tier = 1 },
-                new() { Name = "Lugia VSTAR", PrimaryType = "Colorless", ColorHex = "#A855F7", Tier = 1 },
-                new() { Name = "Gardevoir ex", PrimaryType = "Psychic", ColorHex = "#EC4899", Tier = 1 },
-                new() { Name = "Raging Bolt ex", PrimaryType = "Dragon", ColorHex = "#EAB308", Tier = 1 },
-                new() { Name = "Dragapult ex", PrimaryType = "Dragon", ColorHex = "#8B5CF6", Tier = 1 },
-                new() { Name = "Terapagos ex", PrimaryType = "Colorless", ColorHex = "#06B6D4", Tier = 1 },
-                new() { Name = "Regidrago VSTAR", PrimaryType = "Dragon", ColorHex = "#10B981", Tier = 1 },
-                new() { Name = "Miraidon ex", PrimaryType = "Lightning", ColorHex = "#F59E0B", Tier = 2 },
-                new() { Name = "Roaring Moon ex", PrimaryType = "Darkness", ColorHex = "#475569", Tier = 2 },
-                new() { Name = "Gholdengo ex", PrimaryType = "Metal", ColorHex = "#CBD5E1", Tier = 2 },
-                new() { Name = "Snorlax Stall", PrimaryType = "Colorless", ColorHex = "#64748B", Tier = 2 },
-                new() { Name = "Ancient Box", PrimaryType = "Darkness", ColorHex = "#334155", Tier = 2 },
-                new() { Name = "Chien-Pao ex", PrimaryType = "Water", ColorHex = "#38BDF8", Tier = 2 },
-                new() { Name = "Palkia VSTAR", PrimaryType = "Water", ColorHex = "#2563EB", Tier = 2 },
-                new() { Name = "Gengar ex", PrimaryType = "Darkness", ColorHex = "#581C87", Tier = 3 },
-                new() { Name = "Glaceon / Froslass", PrimaryType = "Water", ColorHex = "#7DD3FC", Tier = 3 },
-                new() { Name = "Banette ex", PrimaryType = "Psychic", ColorHex = "#9333EA", Tier = 3 }
-            };
+                context.MetaArchetypes.RemoveRange(existingArchetypes);
+                await context.SaveChangesAsync();
+            }
+
+            var metaArchetypes = ArchetypeHelper.GetLimitlessTop10();
             await context.MetaArchetypes.AddRangeAsync(metaArchetypes);
             await context.SaveChangesAsync();
         }

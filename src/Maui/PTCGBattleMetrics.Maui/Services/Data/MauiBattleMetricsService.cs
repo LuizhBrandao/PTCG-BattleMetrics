@@ -160,21 +160,7 @@ public class MauiBattleMetricsService : IMauiBattleMetricsService
             }
         }
 
-        return new List<MetaArchetype>
-        {
-            new() { Name = "Charizard ex", PrimaryType = "Fire", ColorHex = "#EF4444", Tier = 1 },
-            new() { Name = "Lugia VSTAR", PrimaryType = "Colorless", ColorHex = "#A855F7", Tier = 1 },
-            new() { Name = "Gardevoir ex", PrimaryType = "Psychic", ColorHex = "#EC4899", Tier = 1 },
-            new() { Name = "Raging Bolt ex", PrimaryType = "Dragon", ColorHex = "#EAB308", Tier = 1 },
-            new() { Name = "Dragapult ex", PrimaryType = "Dragon", ColorHex = "#8B5CF6", Tier = 1 },
-            new() { Name = "Terapagos ex", PrimaryType = "Colorless", ColorHex = "#06B6D4", Tier = 1 },
-            new() { Name = "Regidrago VSTAR", PrimaryType = "Dragon", ColorHex = "#10B981", Tier = 1 },
-            new() { Name = "Miraidon ex", PrimaryType = "Lightning", ColorHex = "#F59E0B", Tier = 2 },
-            new() { Name = "Roaring Moon ex", PrimaryType = "Darkness", ColorHex = "#475569", Tier = 2 },
-            new() { Name = "Gholdengo ex", PrimaryType = "Metal", ColorHex = "#CBD5E1", Tier = 2 },
-            new() { Name = "Snorlax Stall", PrimaryType = "Colorless", ColorHex = "#64748B", Tier = 2 },
-            new() { Name = "Ancient Box", PrimaryType = "Darkness", ColorHex = "#334155", Tier = 2 }
-        };
+        return ArchetypeHelper.GetLimitlessTop10();
     }
 
     // TOURNAMENTS

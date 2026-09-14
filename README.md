@@ -9,7 +9,7 @@
 ### 1. Modo Torneio (Fast Input em < 10 segundos)
 - Registro rápido de rodada entre jogos com **apenas 3 campos obrigatórios**:
   - **Deck Utilizado:** Seleção rápida ou lembrança automática do deck ativo.
-  - **Arquétipo Enfrentado:** Chips do metagame competitivo em 1 toque + busca rápida (*Charizard ex, Lugia VSTAR, Gardevoir ex, Raging Bolt ex, Dragapult ex, Terapagos ex, Regidrago VSTAR, Miraidon ex, Roaring Moon ex, Snorlax Stall*).
+  - **Arquétipo Enfrentado:** Chips do metagame competitivo em 1 toque + busca rápida com o **Top 10 do Limitless TCG** (*Dragapult, Mega Excadrill, Alakazam, Slowking, N's Zoroark, Festival Lead, Dhelmise, Marnie's Grimmsnarl, Mega Lucario, Toucannon*). A 1ª opção de chip é posicionada dinamicamente com o **último arquétipo inserido ou enfrentado** (com ícone `🕒`), permitindo re-seleção instantânea.
   - **Resultado:** 3 botões táteis grandes (Vitória [Verde], Derrota [Vermelho], Empate [Amarelo]).
 
 ### 2. Progressive Disclosure (Telemetria Detalhada Opcional)

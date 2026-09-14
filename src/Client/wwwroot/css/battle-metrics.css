@@ -273,6 +273,18 @@ body {
   box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
 }
 
+.archetype-chip.recent-chip {
+  border-color: #818CF8;
+  background: rgba(99, 102, 241, 0.15);
+  color: #C7D2FE;
+}
+
+.archetype-chip.recent-chip.selected {
+  background: var(--brand-color);
+  border-color: #A5B4FC;
+  color: white;
+}
+
 /* Form Controls */
 .form-group {
   margin-bottom: 14px;

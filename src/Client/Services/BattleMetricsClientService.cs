@@ -18,6 +18,7 @@ public class BattleMetricsClientService
     private const string PendingSyncKey = "ptcg_pending_matches";
     private const string ActiveDeckIdKey = "ptcg_active_deck_id";
     private const string ActiveTournamentIdKey = "ptcg_active_tourney_id";
+    private const string LastFacedArchetypeKey = "ptcg_last_faced_archetype";
 
     public event Action? OnDataChanged;
 
@@ -154,25 +155,26 @@ public class BattleMetricsClientService
             IsOnline = false;
         }
 
-        // Fallback meta archetypes
-        return new List<MetaArchetype>
+        // Fallback meta archetypes (Limitless TCG Top 10)
+        return ArchetypeHelper.GetLimitlessTop10();
+    }
+
+    public async Task<string?> GetLastFacedArchetypeAsync()
+    {
+        var stored = await _storage.GetItemAsync<string>(LastFacedArchetypeKey);
+        if (!string.IsNullOrWhiteSpace(stored))
+            return stored;
+
+        var matches = await _storage.GetItemAsync<List<MatchResponse>>(MatchesStorageKey) ?? new();
+        return matches.OrderByDescending(m => m.CreatedAt).FirstOrDefault()?.OpponentArchetype;
+    }
+
+    public async Task SetLastFacedArchetypeAsync(string archetype)
+    {
+        if (!string.IsNullOrWhiteSpace(archetype))
         {
-            new() { Name = "Charizard ex", PrimaryType = "Fire", ColorHex = "#EF4444", Tier = 1 },
-            new() { Name = "Lugia VSTAR", PrimaryType = "Colorless", ColorHex = "#A855F7", Tier = 1 },
-            new() { Name = "Gardevoir ex", PrimaryType = "Psychic", ColorHex = "#EC4899", Tier = 1 },
-            new() { Name = "Raging Bolt ex", PrimaryType = "Dragon", ColorHex = "#EAB308", Tier = 1 },
-            new() { Name = "Dragapult ex", PrimaryType = "Dragon", ColorHex = "#8B5CF6", Tier = 1 },
-            new() { Name = "Terapagos ex", PrimaryType = "Colorless", ColorHex = "#06B6D4", Tier = 1 },
-            new() { Name = "Regidrago VSTAR", PrimaryType = "Dragon", ColorHex = "#10B981", Tier = 1 },
-            new() { Name = "Miraidon ex", PrimaryType = "Lightning", ColorHex = "#F59E0B", Tier = 2 },
-            new() { Name = "Roaring Moon ex", PrimaryType = "Darkness", ColorHex = "#475569", Tier = 2 },
-            new() { Name = "Gholdengo ex", PrimaryType = "Metal", ColorHex = "#CBD5E1", Tier = 2 },
-            new() { Name = "Snorlax Stall", PrimaryType = "Colorless", ColorHex = "#64748B", Tier = 2 },
-            new() { Name = "Ancient Box", PrimaryType = "Darkness", ColorHex = "#334155", Tier = 2 },
-            new() { Name = "Chien-Pao ex", PrimaryType = "Water", ColorHex = "#38BDF8", Tier = 2 },
-            new() { Name = "Palkia VSTAR", PrimaryType = "Water", ColorHex = "#2563EB", Tier = 2 },
-            new() { Name = "Gengar ex", PrimaryType = "Darkness", ColorHex = "#581C87", Tier = 3 }
-        };
+            await _storage.SetItemAsync(LastFacedArchetypeKey, archetype.Trim());
+        }
     }
 
     // Matches & Offline Fast Input
@@ -248,6 +250,7 @@ public class BattleMetricsClientService
         var cachedMatches = await _storage.GetItemAsync<List<MatchResponse>>(MatchesStorageKey) ?? new();
         cachedMatches.Insert(0, responseDto);
         await _storage.SetItemAsync(MatchesStorageKey, cachedMatches);
+        await SetLastFacedArchetypeAsync(request.OpponentArchetype);
 
         // Attempt API sync
         bool synced = false;

@@ -101,6 +101,8 @@ public partial class FastInputViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isOnline;
 
+    private List<MetaArchetype> _baseArchetypes = new();
+
     public FastInputViewModel(IMauiBattleMetricsService dataService, ISettingsService settings)
     {
         _dataService = dataService;
@@ -150,7 +152,22 @@ public partial class FastInputViewModel : ViewModelBase
 
     private async Task LoadArchetypesAsync()
     {
-        var list = await _dataService.GetArchetypesAsync();
+        _baseArchetypes = await _dataService.GetArchetypesAsync();
+        if (string.IsNullOrWhiteSpace(_settings.LastFacedArchetype))
+        {
+            var matches = await _dataService.GetMatchesAsync();
+            var lastMatch = matches.OrderByDescending(m => m.CreatedAt).FirstOrDefault();
+            if (lastMatch != null && !string.IsNullOrWhiteSpace(lastMatch.OpponentArchetype))
+            {
+                _settings.LastFacedArchetype = lastMatch.OpponentArchetype;
+            }
+        }
+        UpdateDisplayedArchetypes();
+    }
+
+    private void UpdateDisplayedArchetypes()
+    {
+        var list = ArchetypeHelper.GetOrderedArchetypes(_baseArchetypes, _settings.LastFacedArchetype);
         MetaArchetypes = new ObservableCollection<MetaArchetype>(list);
     }
 
@@ -269,6 +286,7 @@ public partial class FastInputViewModel : ViewModelBase
         );
 
         var saved = await _dataService.SaveMatchAsync(request);
+        _settings.LastFacedArchetype = saved.OpponentArchetype;
 
         StatusMessage = $"✓ Partida salva com sucesso! ({saved.Result} vs {saved.OpponentArchetype})";
 
@@ -284,6 +302,7 @@ public partial class FastInputViewModel : ViewModelBase
         OpponentMulligans = 0;
         ShowTelemetry = false;
 
+        UpdateDisplayedArchetypes();
         UpdateStatus();
         IsBusy = false;
     }

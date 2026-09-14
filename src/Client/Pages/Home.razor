@@ -55,11 +55,18 @@
 
             <!-- Meta Quick Chips -->
             <div class="chip-scroller">
-                @foreach (var arch in metaArchetypes)
+                @foreach (var arch in displayedArchetypes)
                 {
+                    var isLastFaced = !string.IsNullOrWhiteSpace(lastFacedArchetype) && 
+                                      string.Equals(arch.Name, lastFacedArchetype, StringComparison.OrdinalIgnoreCase);
                     <button type="button" 
-                            class="archetype-chip @(selectedArchetype == arch.Name ? "selected" : "")"
-                            @onclick="() => SelectArchetype(arch.Name)">
+                            class="archetype-chip @(selectedArchetype == arch.Name ? "selected" : "") @(isLastFaced ? "recent-chip" : "")"
+                            @onclick="() => SelectArchetype(arch.Name)"
+                            title="@(isLastFaced ? "Último arquétipo enfrentado/inserido" : arch.Name)">
+                        @if (isLastFaced)
+                        {
+                            <span style="margin-right: 4px;">🕒</span>
+                        }
                         @arch.Name
                     </button>
                 }
@@ -272,7 +279,7 @@
     @if (showToast)
     {
         <div class="toast-success">
-            ✓ Partida salva com sucesso! (@lastResultDisplay vs @selectedArchetype)
+            ✓ Partida salva com sucesso! (@lastResultDisplay vs @savedArchetypeDisplay)
         </div>
     }
 
@@ -329,12 +336,15 @@
 @code {
     private List<DeckResponse> decks = new();
     private List<MetaArchetype> metaArchetypes = new();
+    private List<MetaArchetype> displayedArchetypes = new();
+    private string? lastFacedArchetype;
     private List<MatchResponse> recentMatches = new();
     private TournamentResponse? activeTournament;
 
     // Fast Input Fields
     private Guid selectedDeckId = Guid.Empty;
     private string selectedArchetype = "";
+    private string savedArchetypeDisplay = "";
     private MatchResult selectedResult = MatchResult.Win;
 
     // Progressive Disclosure Telemetry Fields
@@ -371,6 +381,13 @@
     {
         decks = await ClientService.GetDecksAsync();
         metaArchetypes = await ClientService.GetArchetypesAsync();
+        recentMatches = await ClientService.GetMatchesAsync();
+        lastFacedArchetype = await ClientService.GetLastFacedArchetypeAsync();
+        if (string.IsNullOrWhiteSpace(lastFacedArchetype) && recentMatches.Count > 0)
+        {
+            lastFacedArchetype = recentMatches.OrderByDescending(m => m.CreatedAt).FirstOrDefault()?.OpponentArchetype;
+        }
+        UpdateDisplayedArchetypes();
 
         var activeDeckId = await ClientService.GetActiveDeckIdAsync();
         if (activeDeckId.HasValue && decks.Any(d => d.Id == activeDeckId.Value))
@@ -389,14 +406,17 @@
             activeTournament = tourneys.FirstOrDefault(t => t.Id == activeTourneyId.Value);
         }
 
-        recentMatches = await ClientService.GetMatchesAsync();
-
         // If in tournament, guess next round number
         if (activeTournament != null)
         {
             var tourneyMatches = recentMatches.Where(m => m.TournamentId == activeTournament.Id).ToList();
             roundNumber = tourneyMatches.Count + 1;
         }
+    }
+
+    private void UpdateDisplayedArchetypes()
+    {
+        displayedArchetypes = ArchetypeHelper.GetOrderedArchetypes(metaArchetypes, lastFacedArchetype);
     }
 
     private void SelectArchetype(string arch)
@@ -419,9 +439,12 @@
 
         isSaving = true;
 
+        savedArchetypeDisplay = selectedArchetype.Trim();
+        lastFacedArchetype = savedArchetypeDisplay;
+
         var request = new CreateMatchRequest(
             DeckId: selectedDeckId,
-            OpponentArchetype: selectedArchetype.Trim(),
+            OpponentArchetype: savedArchetypeDisplay,
             Result: selectedResult,
             TournamentId: activeTournament?.Id,
             RoundNumber: roundNumber,
@@ -463,6 +486,7 @@
         opponentMulligans = 0;
 
         recentMatches = await ClientService.GetMatchesAsync();
+        UpdateDisplayedArchetypes();
         isSaving = false;
         showToast = true;
 
