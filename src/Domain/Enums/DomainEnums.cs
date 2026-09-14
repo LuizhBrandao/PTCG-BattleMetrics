@@ -26,7 +26,8 @@ public enum WinCondition
     Concede = 2,
     DeckOut = 3,
     TimeoutSuddenDeath = 4,
-    PenaltyDQ = 5
+    PenaltyDQ = 5,
+    Donk = 6
 }
 
 public enum TournamentCategory

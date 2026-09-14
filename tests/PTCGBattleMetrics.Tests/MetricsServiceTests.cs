@@ -181,4 +181,29 @@ public class MetricsServiceTests
         Assert.Contains(telemetry.WinConditions, w => w.Condition == WinCondition.PrizeKnockout && w.Count == 2);
         Assert.Contains(telemetry.WinConditions, w => w.Condition == WinCondition.Concede && w.Count == 2);
     }
+
+    [Fact]
+    public void CalculateAdvancedTelemetry_IncludesDonkCondition()
+    {
+        // Arrange
+        var matches = new List<Match>
+        {
+            new()
+            {
+                Result = MatchResult.Win,
+                WinCondition = WinCondition.Donk
+            }
+        };
+
+        // Act
+        var telemetry = _service.CalculateAdvancedTelemetry(matches);
+
+        // Assert
+        Assert.Single(telemetry.WinConditions);
+        var donk = telemetry.WinConditions.First();
+        Assert.Equal(WinCondition.Donk, donk.Condition);
+        Assert.Equal("Donk (Sem Pokémon em Jogo)", donk.ConditionName);
+        Assert.Equal(1, donk.Count);
+        Assert.Equal(100.0, donk.Percentage);
+    }
 }

@@ -92,7 +92,7 @@
                             </div>
                             <div>
                                 Condição: 
-                                <strong>@(m.WinCondition.HasValue ? m.WinCondition.Value.ToString() : "Nocaute")</strong>
+                                <strong>@FormatWinCondition(m.WinCondition)</strong>
                             </div>
                         </div>
 
@@ -158,4 +158,15 @@
     {
         expandedMatchId = expandedMatchId == id ? null : id;
     }
+
+    private string FormatWinCondition(WinCondition? cond) => cond switch
+    {
+        WinCondition.PrizeKnockout => "Nocaute / 6 Prêmios",
+        WinCondition.Donk => "Donk (Sem Pokémon em Jogo)",
+        WinCondition.Concede => "Concede (Rendição)",
+        WinCondition.DeckOut => "Deck Out (Fim do Baralho)",
+        WinCondition.TimeoutSuddenDeath => "Timeout / Morte Súbita",
+        WinCondition.PenaltyDQ => "Penalidade / DQ",
+        _ => "Nocaute"
+    };
 }

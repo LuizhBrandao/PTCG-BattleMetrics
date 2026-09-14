@@ -301,6 +301,7 @@ public class MetricsService : IMetricsService
                 var displayName = cond switch
                 {
                     WinCondition.PrizeKnockout => "Nocaute / 6 Prêmios",
+                    WinCondition.Donk => "Donk (Sem Pokémon em Jogo)",
                     WinCondition.Concede => "Concede (Rendição)",
                     WinCondition.DeckOut => "Deck Out",
                     WinCondition.TimeoutSuddenDeath => "Timeout / Morte Súbita",
