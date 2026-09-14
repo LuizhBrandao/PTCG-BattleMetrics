@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using PTCGBattleMetrics.Application.DTOs;
+using PTCGBattleMetrics.Application.Services;
 using PTCGBattleMetrics.Domain.Entities;
 using PTCGBattleMetrics.Domain.Enums;
 using PTCGBattleMetrics.Maui.Messages;

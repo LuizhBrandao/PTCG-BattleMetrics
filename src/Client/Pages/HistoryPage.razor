@@ -1,5 +1,6 @@
 @page "/history"
 @inject BattleMetricsClientService ClientService
+@implements IDisposable
 
 <div class="history-page">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
@@ -27,12 +28,18 @@
             <div class="battle-card" style="margin-bottom: 10px; cursor: pointer;" @onclick="() => ToggleExpand(m.Id)">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <span style="font-weight: 800; font-size: 1.05rem; color: #F8FAFC;">vs @m.OpponentArchetype</span>
                             @if (m.RoundNumber.HasValue)
                             {
                                 <span style="background: #1E293B; color: #818CF8; border: 1px solid #334155; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
-                                    R@m.RoundNumber
+                                    R@(m.RoundNumber)
+                                </span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(m.TournamentName))
+                            {
+                                <span style="background: rgba(234, 179, 8, 0.15); color: #FDE047; border: 1px solid rgba(234, 179, 8, 0.3); font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
+                                    🏆 @m.TournamentName
                                 </span>
                             }
                             @if (m.TableNumber.HasValue)
@@ -145,6 +152,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ClientService.OnDataChanged += HandleDataChanged;
+        await LoadMatchesAsync();
+    }
+
+    private async Task LoadMatchesAsync()
+    {
         matches = await ClientService.GetMatchesAsync();
     }
 
@@ -152,6 +165,7 @@
         ? matches
         : matches.Where(m => m.OpponentArchetype.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
                              (m.DeckName != null && m.DeckName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                             (m.TournamentName != null && m.TournamentName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
                              (m.OpponentName != null && m.OpponentName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))).ToList();
 
     private void ToggleExpand(Guid id)
@@ -169,4 +183,18 @@
         WinCondition.PenaltyDQ => "Penalidade / DQ",
         _ => "Nocaute"
     };
+
+    private void HandleDataChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await LoadMatchesAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        ClientService.OnDataChanged -= HandleDataChanged;
+    }
 }

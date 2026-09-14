@@ -166,6 +166,7 @@ public class MauiBattleMetricsService : IMauiBattleMetricsService
     // TOURNAMENTS
     public async Task<List<TournamentResponse>> GetTournamentsAsync()
     {
+        List<TournamentResponse> tourneys;
         if (!_settings.OfflineMode)
         {
             try
@@ -176,16 +177,88 @@ public class MauiBattleMetricsService : IMauiBattleMetricsService
                 {
                     IsOnline = true;
                     SaveToPreferences(CachedTournamentsKey, remote);
-                    return remote;
+                    tourneys = remote;
+                }
+                else
+                {
+                    tourneys = LoadFromPreferences<List<TournamentResponse>>(CachedTournamentsKey) ?? new();
                 }
             }
             catch
             {
                 IsOnline = false;
+                tourneys = LoadFromPreferences<List<TournamentResponse>>(CachedTournamentsKey) ?? new();
+            }
+        }
+        else
+        {
+            tourneys = LoadFromPreferences<List<TournamentResponse>>(CachedTournamentsKey) ?? new();
+        }
+
+        if (tourneys.Count == 0) return tourneys;
+
+        var cachedMatches = LoadFromPreferences<List<MatchResponse>>(CachedMatchesKey) ?? new();
+        var activeTourneyId = _settings.ActiveTournamentId;
+
+        bool matchesModified = false;
+        var targetTourneyForOrphans = tourneys.FirstOrDefault(t => t.Id == activeTourneyId) ?? (tourneys.Count == 1 ? tourneys[0] : null);
+
+        if (targetTourneyForOrphans != null)
+        {
+            for (int i = 0; i < cachedMatches.Count; i++)
+            {
+                var m = cachedMatches[i];
+                if (!m.TournamentId.HasValue && (m.RoundNumber.HasValue || tourneys.Count == 1))
+                {
+                    cachedMatches[i] = m with
+                    {
+                        TournamentId = targetTourneyForOrphans.Id,
+                        TournamentName = targetTourneyForOrphans.Name
+                    };
+                    matchesModified = true;
+                }
+                else if (m.TournamentId.HasValue && string.IsNullOrWhiteSpace(m.TournamentName))
+                {
+                    var matchingT = tourneys.FirstOrDefault(t => t.Id == m.TournamentId.Value);
+                    if (matchingT != null)
+                    {
+                        cachedMatches[i] = m with { TournamentName = matchingT.Name };
+                        matchesModified = true;
+                    }
+                }
+            }
+
+            if (matchesModified)
+            {
+                SaveToPreferences(CachedMatchesKey, cachedMatches);
             }
         }
 
-        return LoadFromPreferences<List<TournamentResponse>>(CachedTournamentsKey) ?? new();
+        var enriched = tourneys.Select(t =>
+        {
+            var tMatches = cachedMatches.Where(m => m.TournamentId == t.Id).ToList();
+            if (tMatches.Count > 0 || _settings.OfflineMode || !IsOnline)
+            {
+                int wins = tMatches.Count(m => m.Result == MatchResult.Win);
+                int losses = tMatches.Count(m => m.Result == MatchResult.Loss);
+                int ties = tMatches.Count(m => m.Result == MatchResult.Tie);
+                int matchPoints = (wins * 3) + (ties * 1);
+                string record = $"{wins}-{losses}-{ties}";
+                return t with
+                {
+                    TotalWins = wins,
+                    TotalLosses = losses,
+                    TotalTies = ties,
+                    MatchPoints = matchPoints,
+                    RecordDisplay = record,
+                    MatchesCount = tMatches.Count
+                };
+            }
+            return t;
+        }).ToList();
+
+        SaveToPreferences(CachedTournamentsKey, enriched);
+        return enriched;
     }
 
     public async Task<TournamentResponse?> CreateTournamentAsync(CreateTournamentRequest request)
@@ -281,14 +354,22 @@ public class MauiBattleMetricsService : IMauiBattleMetricsService
         var decks = await GetDecksAsync();
         var deck = decks.FirstOrDefault(d => d.Id == request.DeckId);
 
+        var effectiveTourneyId = request.TournamentId ?? _settings.ActiveTournamentId;
+        string? tourneyName = null;
+        if (effectiveTourneyId.HasValue)
+        {
+            var cachedTourneys = LoadFromPreferences<List<TournamentResponse>>(CachedTournamentsKey) ?? new();
+            tourneyName = cachedTourneys.FirstOrDefault(t => t.Id == effectiveTourneyId.Value)?.Name;
+        }
+
         var matchId = Guid.NewGuid();
         var response = new MatchResponse(
             Id: matchId,
             DeckId: request.DeckId,
             DeckName: deck?.Name ?? "Deck",
             DeckArchetype: deck?.Archetype ?? "Arquetipo",
-            TournamentId: request.TournamentId,
-            TournamentName: null,
+            TournamentId: effectiveTourneyId,
+            TournamentName: tourneyName,
             OpponentArchetype: request.OpponentArchetype,
             Result: request.Result,
             CreatedAt: request.CreatedAt ?? DateTimeOffset.UtcNow,
@@ -317,13 +398,42 @@ public class MauiBattleMetricsService : IMauiBattleMetricsService
         cached.Insert(0, response);
         SaveToPreferences(CachedMatchesKey, cached);
 
+        // Update cached tournament statistics immediately
+        if (effectiveTourneyId.HasValue)
+        {
+            var cachedTourneys = LoadFromPreferences<List<TournamentResponse>>(CachedTournamentsKey) ?? new();
+            var tourneyIndex = cachedTourneys.FindIndex(t => t.Id == effectiveTourneyId.Value);
+            if (tourneyIndex >= 0)
+            {
+                var t = cachedTourneys[tourneyIndex];
+                var tMatches = cached.Where(m => m.TournamentId == t.Id).ToList();
+                int wins = tMatches.Count(m => m.Result == MatchResult.Win);
+                int losses = tMatches.Count(m => m.Result == MatchResult.Loss);
+                int ties = tMatches.Count(m => m.Result == MatchResult.Tie);
+                int matchPoints = (wins * 3) + (ties * 1);
+                string record = $"{wins}-{losses}-{ties}";
+                cachedTourneys[tourneyIndex] = t with
+                {
+                    TotalWins = wins,
+                    TotalLosses = losses,
+                    TotalTies = ties,
+                    MatchPoints = matchPoints,
+                    RecordDisplay = record,
+                    MatchesCount = tMatches.Count
+                };
+                SaveToPreferences(CachedTournamentsKey, cachedTourneys);
+            }
+        }
+
+        var syncRequest = request.TournamentId == effectiveTourneyId ? request : request with { TournamentId = effectiveTourneyId };
+
         bool synced = false;
         if (!_settings.OfflineMode)
         {
             try
             {
                 UpdateBaseAddress();
-                var res = await _httpClient.PostAsJsonAsync("api/matches", request);
+                var res = await _httpClient.PostAsJsonAsync("api/matches", syncRequest);
                 if (res.IsSuccessStatusCode)
                 {
                     IsOnline = true;
@@ -339,7 +449,7 @@ public class MauiBattleMetricsService : IMauiBattleMetricsService
         if (!synced)
         {
             var pending = GetPendingMatches();
-            pending.Add(request);
+            pending.Add(syncRequest);
             SaveToPreferences(PendingMatchesKey, pending);
         }
 

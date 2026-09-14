@@ -36,6 +36,11 @@ public class BattleMetricsClientService
     {
         var pending = await _storage.GetItemAsync<List<CreateMatchRequest>>(PendingSyncKey) ?? new();
         PendingSyncCount = pending.Count;
+        try
+        {
+            await GetTournamentsAsync();
+        }
+        catch { }
         OnDataChanged?.Invoke();
     }
 
@@ -216,13 +221,28 @@ public class BattleMetricsClientService
         var decks = await GetDecksAsync();
         var deck = decks.FirstOrDefault(d => d.Id == request.DeckId);
 
+        // Ensure tournament ID is associated if an event is active
+        var effectiveTourneyId = request.TournamentId;
+        if (!effectiveTourneyId.HasValue)
+        {
+            effectiveTourneyId = await GetActiveTournamentIdAsync();
+        }
+
+        // Resolve tournament name
+        string? tourneyName = null;
+        if (effectiveTourneyId.HasValue)
+        {
+            var cachedTourneys = await _storage.GetItemAsync<List<TournamentResponse>>(TournamentsStorageKey) ?? new();
+            tourneyName = cachedTourneys.FirstOrDefault(t => t.Id == effectiveTourneyId.Value)?.Name;
+        }
+
         var responseDto = new MatchResponse(
             Id: matchId,
             DeckId: request.DeckId,
             DeckName: deck?.Name ?? "Deck",
             DeckArchetype: deck?.Archetype ?? "Arquetipo",
-            TournamentId: request.TournamentId,
-            TournamentName: null,
+            TournamentId: effectiveTourneyId,
+            TournamentName: tourneyName,
             OpponentArchetype: request.OpponentArchetype,
             Result: request.Result,
             CreatedAt: request.CreatedAt ?? DateTimeOffset.UtcNow,
@@ -252,11 +272,41 @@ public class BattleMetricsClientService
         await _storage.SetItemAsync(MatchesStorageKey, cachedMatches);
         await SetLastFacedArchetypeAsync(request.OpponentArchetype);
 
+        // Update cached tournament statistics immediately
+        if (effectiveTourneyId.HasValue)
+        {
+            var cachedTourneys = await _storage.GetItemAsync<List<TournamentResponse>>(TournamentsStorageKey) ?? new();
+            var tourneyIndex = cachedTourneys.FindIndex(t => t.Id == effectiveTourneyId.Value);
+            if (tourneyIndex >= 0)
+            {
+                var t = cachedTourneys[tourneyIndex];
+                var tMatches = cachedMatches.Where(m => m.TournamentId == t.Id).ToList();
+                int wins = tMatches.Count(m => m.Result == MatchResult.Win);
+                int losses = tMatches.Count(m => m.Result == MatchResult.Loss);
+                int ties = tMatches.Count(m => m.Result == MatchResult.Tie);
+                int matchPoints = (wins * 3) + (ties * 1);
+                string record = $"{wins}-{losses}-{ties}";
+                cachedTourneys[tourneyIndex] = t with
+                {
+                    TotalWins = wins,
+                    TotalLosses = losses,
+                    TotalTies = ties,
+                    MatchPoints = matchPoints,
+                    RecordDisplay = record,
+                    MatchesCount = tMatches.Count
+                };
+                await _storage.SetItemAsync(TournamentsStorageKey, cachedTourneys);
+            }
+        }
+
+        // Prepare request for API sync with effective tournament ID
+        var syncRequest = request.TournamentId == effectiveTourneyId ? request : request with { TournamentId = effectiveTourneyId };
+
         // Attempt API sync
         bool synced = false;
         try
         {
-            var res = await _http.PostAsJsonAsync("api/matches", request);
+            var res = await _http.PostAsJsonAsync("api/matches", syncRequest);
             if (res.IsSuccessStatusCode)
             {
                 IsOnline = true;
@@ -271,7 +321,7 @@ public class BattleMetricsClientService
         if (!synced)
         {
             var pending = await _storage.GetItemAsync<List<CreateMatchRequest>>(PendingSyncKey) ?? new();
-            pending.Add(request);
+            pending.Add(syncRequest);
             await _storage.SetItemAsync(PendingSyncKey, pending);
             PendingSyncCount = pending.Count;
         }
@@ -310,6 +360,7 @@ public class BattleMetricsClientService
     // Tournaments
     public async Task<List<TournamentResponse>> GetTournamentsAsync()
     {
+        List<TournamentResponse> tourneys;
         try
         {
             var remote = await _http.GetFromJsonAsync<List<TournamentResponse>>("api/tournaments");
@@ -317,15 +368,89 @@ public class BattleMetricsClientService
             {
                 IsOnline = true;
                 await _storage.SetItemAsync(TournamentsStorageKey, remote);
-                return remote;
+                tourneys = remote;
+            }
+            else
+            {
+                tourneys = await _storage.GetItemAsync<List<TournamentResponse>>(TournamentsStorageKey) ?? new();
             }
         }
         catch
         {
             IsOnline = false;
+            tourneys = await _storage.GetItemAsync<List<TournamentResponse>>(TournamentsStorageKey) ?? new();
         }
 
-        return await _storage.GetItemAsync<List<TournamentResponse>>(TournamentsStorageKey) ?? new();
+        if (tourneys.Count == 0)
+        {
+            return tourneys;
+        }
+
+        // Get all stored matches to enrich tournaments with actual match records
+        var cachedMatches = await _storage.GetItemAsync<List<MatchResponse>>(MatchesStorageKey) ?? new();
+        var activeTourneyId = await GetActiveTournamentIdAsync();
+
+        // Self-healing: If there are matches without TournamentId, but an active tournament exists (or only 1 tournament exists), link them
+        bool matchesModified = false;
+        var targetTourneyForOrphans = tourneys.FirstOrDefault(t => t.Id == activeTourneyId) ?? (tourneys.Count == 1 ? tourneys[0] : null);
+
+        if (targetTourneyForOrphans != null)
+        {
+            for (int i = 0; i < cachedMatches.Count; i++)
+            {
+                var m = cachedMatches[i];
+                if (!m.TournamentId.HasValue && (m.RoundNumber.HasValue || tourneys.Count == 1))
+                {
+                    cachedMatches[i] = m with
+                    {
+                        TournamentId = targetTourneyForOrphans.Id,
+                        TournamentName = targetTourneyForOrphans.Name
+                    };
+                    matchesModified = true;
+                }
+                else if (m.TournamentId.HasValue && string.IsNullOrWhiteSpace(m.TournamentName))
+                {
+                    var matchingT = tourneys.FirstOrDefault(t => t.Id == m.TournamentId.Value);
+                    if (matchingT != null)
+                    {
+                        cachedMatches[i] = m with { TournamentName = matchingT.Name };
+                        matchesModified = true;
+                    }
+                }
+            }
+
+            if (matchesModified)
+            {
+                await _storage.SetItemAsync(MatchesStorageKey, cachedMatches);
+            }
+        }
+
+        // Recalculate statistics for each tournament based on actual matches
+        var enriched = tourneys.Select(t =>
+        {
+            var tMatches = cachedMatches.Where(m => m.TournamentId == t.Id).ToList();
+            if (tMatches.Count > 0 || !IsOnline)
+            {
+                int wins = tMatches.Count(m => m.Result == MatchResult.Win);
+                int losses = tMatches.Count(m => m.Result == MatchResult.Loss);
+                int ties = tMatches.Count(m => m.Result == MatchResult.Tie);
+                int matchPoints = (wins * 3) + (ties * 1);
+                string record = $"{wins}-{losses}-{ties}";
+                return t with
+                {
+                    TotalWins = wins,
+                    TotalLosses = losses,
+                    TotalTies = ties,
+                    MatchPoints = matchPoints,
+                    RecordDisplay = record,
+                    MatchesCount = tMatches.Count
+                };
+            }
+            return t;
+        }).ToList();
+
+        await _storage.SetItemAsync(TournamentsStorageKey, enriched);
+        return enriched;
     }
 
     public async Task<TournamentResponse?> CreateTournamentAsync(CreateTournamentRequest request)

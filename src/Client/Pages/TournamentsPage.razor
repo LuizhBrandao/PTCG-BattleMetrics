@@ -1,5 +1,6 @@
 @page "/tournaments"
 @inject BattleMetricsClientService ClientService
+@implements IDisposable
 
 <div class="tournaments-page">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
@@ -93,6 +94,9 @@
         @foreach (var t in tournaments)
         {
             var isActive = t.Id == activeTourneyId;
+            var tMatches = matches.Where(m => m.TournamentId == t.Id).OrderBy(m => m.RoundNumber ?? 0).ThenBy(m => m.CreatedAt).ToList();
+            var isExpanded = expandedTourneyId == t.Id;
+
             <div class="battle-card" style="border: @(isActive ? "2px solid #EAB308" : "1px solid var(--border-color)");">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
                     <div>
@@ -143,6 +147,63 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Match List Accordion -->
+                <div style="margin-top: 10px; border-top: 1px solid #1E293B; padding-top: 8px;">
+                    <button type="button" class="accordion-toggle" style="background: none; border: none; width: 100%; display: flex; justify-content: space-between; align-items: center; color: #818CF8; font-size: 0.8rem; font-weight: 700; cursor: pointer; padding: 4px 0;"
+                            @onclick="() => expandedTourneyId = isExpanded ? null : t.Id">
+                        <span>📜 Partidas do Torneio (@tMatches.Count)</span>
+                        <span>@(isExpanded ? "▲ Recolher" : "▼ Ver Partidas")</span>
+                    </button>
+
+                    @if (isExpanded)
+                    {
+                        <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 6px;">
+                            @if (tMatches.Count == 0)
+                            {
+                                <div style="font-size: 0.8rem; color: #64748B; text-align: center; padding: 10px;">
+                                    Nenhuma partida registrada para este torneio ainda.
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var m in tMatches)
+                                {
+                                    <div style="background: #0F172A; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #1E293B;">
+                                        <div>
+                                            <div style="display: flex; align-items: center; gap: 6px;">
+                                                @if (m.RoundNumber.HasValue)
+                                                {
+                                                    <span style="font-size: 0.7rem; background: #334155; padding: 1px 6px; border-radius: 4px; color: #94A3B8; font-weight: 700;">
+                                                        R@(m.RoundNumber)
+                                                    </span>
+                                                }
+                                                <span style="font-weight: 800; font-size: 0.9rem; color: #F1F5F9;">vs @m.OpponentArchetype</span>
+                                            </div>
+                                            <div style="font-size: 0.7rem; color: #64748B; margin-top: 2px;">
+                                                @m.DeckName • @(m.CreatedAt.LocalDateTime.ToString("HH:mm"))
+                                            </div>
+                                        </div>
+                                        <div>
+                                            @if (m.Result == MatchResult.Win)
+                                            {
+                                                <span class="badge-favorable" style="font-size: 0.7rem;">VITÓRIA</span>
+                                            }
+                                            else if (m.Result == MatchResult.Loss)
+                                            {
+                                                <span class="badge-unfavorable" style="font-size: 0.7rem;">DERROTA</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge-neutral" style="font-size: 0.7rem;">EMPATE</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
             </div>
         }
     }
@@ -150,7 +211,9 @@
 
 @code {
     private List<TournamentResponse> tournaments = new();
+    private List<MatchResponse> matches = new();
     private Guid? activeTourneyId;
+    private Guid? expandedTourneyId;
     private bool showCreateModal = false;
 
     private string tourneyName = "";
@@ -164,12 +227,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ClientService.OnDataChanged += HandleDataChanged;
         await LoadTournamentsAsync();
     }
 
     private async Task LoadTournamentsAsync()
     {
         tournaments = await ClientService.GetTournamentsAsync();
+        matches = await ClientService.GetMatchesAsync();
         activeTourneyId = await ClientService.GetActiveTournamentIdAsync();
     }
 
@@ -204,5 +269,20 @@
     {
         await ClientService.SetActiveTournamentIdAsync(id);
         activeTourneyId = id;
+        await LoadTournamentsAsync();
+    }
+
+    private void HandleDataChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await LoadTournamentsAsync();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        ClientService.OnDataChanged -= HandleDataChanged;
     }
 }
