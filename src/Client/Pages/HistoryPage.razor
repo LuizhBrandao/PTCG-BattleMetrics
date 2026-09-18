@@ -25,8 +25,8 @@
         @foreach (var m in filteredMatches)
         {
             var isExpanded = expandedMatchId == m.Id;
-            <div class="battle-card" style="margin-bottom: 10px; cursor: pointer;" @onclick="() => ToggleExpand(m.Id)">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="battle-card" style="margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" @onclick="() => ToggleExpand(m.Id)">
                     <div>
                         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <span style="font-weight: 800; font-size: 1.05rem; color: #F8FAFC;">vs @m.OpponentArchetype</span>
@@ -140,20 +140,226 @@
                         }
                     </div>
                 }
+
+                <!-- Card Actions: Editar e Excluir -->
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed #222F43;">
+                    <button class="btn" style="padding: 5px 12px; font-size: 0.75rem; background: #1E293B; color: #818CF8; border: 1px solid #334155; border-radius: 6px;"
+                            @onclick="() => OpenEditModal(m)" @onclick:stopPropagation="true">
+                        ✏️ Editar
+                    </button>
+                    <button class="btn" style="padding: 5px 12px; font-size: 0.75rem; background: rgba(239, 68, 68, 0.1); color: #F87171; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px;"
+                            @onclick="() => PromptDelete(m.Id)" @onclick:stopPropagation="true">
+                        🗑️ Excluir
+                    </button>
+                </div>
             </div>
         }
     }
 </div>
 
+<!-- Modal de Edição -->
+@if (showEditModal && matchToEdit != null)
+{
+    <div style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(4px);">
+        <div class="battle-card" style="width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; background: #151D2F; border: 1px solid #4F46E5; border-radius: 14px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div style="font-weight: 800; font-size: 1.1rem; color: #F8FAFC;">✏️ Editar Partida</div>
+                <button style="background: transparent; border: none; color: #94A3B8; font-size: 1.2rem; cursor: pointer;" @onclick="CloseEditModal">✕</button>
+            </div>
+
+            <!-- Resultado -->
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 6px;">Resultado *</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                    <button type="button" class="btn" style="padding: 10px; font-weight: 800; border-radius: 8px; border: 2px solid @(editResult == MatchResult.Win ? "#10B981" : "#334155"); background: @(editResult == MatchResult.Win ? "#10B981" : "#1E293B"); color: @(editResult == MatchResult.Win ? "#022C22" : "#F8FAFC");"
+                            @onclick="() => editResult = MatchResult.Win">
+                        VITÓRIA
+                    </button>
+                    <button type="button" class="btn" style="padding: 10px; font-weight: 800; border-radius: 8px; border: 2px solid @(editResult == MatchResult.Loss ? "#EF4444" : "#334155"); background: @(editResult == MatchResult.Loss ? "#EF4444" : "#1E293B"); color: @(editResult == MatchResult.Loss ? "#450A0A" : "#F8FAFC");"
+                            @onclick="() => editResult = MatchResult.Loss">
+                        DERROTA
+                    </button>
+                    <button type="button" class="btn" style="padding: 10px; font-weight: 800; border-radius: 8px; border: 2px solid @(editResult == MatchResult.Tie ? "#F59E0B" : "#334155"); background: @(editResult == MatchResult.Tie ? "#F59E0B" : "#1E293B"); color: @(editResult == MatchResult.Tie ? "#451A03" : "#F8FAFC");"
+                            @onclick="() => editResult = MatchResult.Tie">
+                        EMPATE
+                    </button>
+                </div>
+            </div>
+
+            <!-- Deck Utilizado -->
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 6px;">Deck Utilizado *</label>
+                <select class="form-input" @bind="editDeckId" style="padding: 8px 12px;">
+                    @foreach (var d in availableDecks)
+                    {
+                        <option value="@d.Id">@d.Name (@d.Archetype)</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Arquétipo Enfrentado -->
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 6px;">Arquétipo Enfrentado *</label>
+                <input type="text" class="form-input" @bind="editOpponentArchetype" placeholder="ex: Charizard ex, Lugia VSTAR..." style="padding: 8px 12px;" />
+            </div>
+
+            <!-- Rodada & Mesa -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">Rodada (Round)</label>
+                    <input type="number" class="form-input" @bind="editRoundNumber" placeholder="ex: 1" style="padding: 8px 12px;" />
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">Mesa</label>
+                    <input type="number" class="form-input" @bind="editTableNumber" placeholder="ex: 12" style="padding: 8px 12px;" />
+                </div>
+            </div>
+
+            <!-- Oponente & POP ID -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">Nome Oponente</label>
+                    <input type="text" class="form-input" @bind="editOpponentName" placeholder="Nome" style="padding: 8px 12px;" />
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">POP ID</label>
+                    <input type="text" class="form-input" @bind="editOpponentPopId" placeholder="POP ID" style="padding: 8px 12px;" />
+                </div>
+            </div>
+
+            <!-- Iniciativa & Moeda -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">Ordem de Turno</label>
+                    <select class="form-input" @bind="editTurnOrder" style="padding: 8px 12px;">
+                        <option value="">Não informado</option>
+                        <option value="@TurnOrder.First">1º a Jogar (First)</option>
+                        <option value="@TurnOrder.Second">2º a Jogar (Second)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">Cara ou Coroa</label>
+                    <select class="form-input" @bind="editCoinFlipWon" style="padding: 8px 12px;">
+                        <option value="">Não informado</option>
+                        <option value="true">Venceu a Moeda</option>
+                        <option value="false">Perdeu a Moeda</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Prêmios Restantes -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">Meus Prêmios Restantes</label>
+                    <input type="number" min="0" max="6" class="form-input" @bind="editPlayerPrizesRemaining" style="padding: 8px 12px;" />
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">Prêmios Rest. Oponente</label>
+                    <input type="number" min="0" max="6" class="form-input" @bind="editOpponentPrizesRemaining" style="padding: 8px 12px;" />
+                </div>
+            </div>
+
+            <!-- Mulligans -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">Meus Mulligans</label>
+                    <input type="number" min="0" class="form-input" @bind="editPlayerMulligans" style="padding: 8px 12px;" />
+                </div>
+                <div>
+                    <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">Mulligans Oponente</label>
+                    <input type="number" min="0" class="form-input" @bind="editOpponentMulligans" style="padding: 8px 12px;" />
+                </div>
+            </div>
+
+            <!-- Pokémon Ativo Inicial -->
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">Pokémon Ativo Inicial</label>
+                <input type="text" class="form-input" @bind="editStartingActivePokemon" placeholder="ex: Charmander, Rotom V..." style="padding: 8px 12px;" />
+            </div>
+
+            <!-- Anotações Táticas -->
+            <div style="margin-bottom: 16px;">
+                <label style="font-size: 0.8rem; font-weight: 700; color: #94A3B8; display: block; margin-bottom: 4px;">Anotações Táticas</label>
+                <textarea class="form-input" @bind="editTacticalNotes" rows="2" placeholder="Erros de sequenciamento, cartas no prêmio..." style="padding: 8px 12px;"></textarea>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn" style="flex: 1; padding: 12px; font-weight: 800; background: #4F46E5; color: #F8FAFC; border: none; border-radius: 8px;"
+                        @onclick="SaveEditedMatchAsync">
+                    Salvar Alterações
+                </button>
+                <button type="button" class="btn" style="padding: 12px 18px; font-weight: 700; background: #1E293B; color: #94A3B8; border: 1px solid #334155; border-radius: 8px;"
+                        @onclick="CloseEditModal">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal de Confirmação de Exclusão -->
+@if (showDeleteConfirm && matchToDeleteId.HasValue)
+{
+    var mToDelete = matches.FirstOrDefault(m => m.Id == matchToDeleteId.Value);
+    <div style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(4px);">
+        <div class="battle-card" style="width: 100%; max-width: 400px; background: #151D2F; border: 1px solid #EF4444; border-radius: 14px; padding: 20px; text-align: center;">
+            <div style="font-size: 2.5rem; margin-bottom: 8px;">🗑️</div>
+            <div style="font-weight: 800; font-size: 1.15rem; color: #F8FAFC; margin-bottom: 8px;">Excluir Partida?</div>
+            <p style="font-size: 0.85rem; color: #94A3B8; margin-bottom: 18px;">
+                Deseja realmente excluir a partida contra <strong>@(mToDelete?.OpponentArchetype ?? "este oponente")</strong>? 
+                Esta ação recalculará as taxas de vitória e estatísticas de torneio imediatamente.
+            </p>
+
+            <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn" style="flex: 1; padding: 11px; font-weight: 800; background: #EF4444; color: #FFFFFF; border: none; border-radius: 8px;"
+                        @onclick="ConfirmDeleteAsync">
+                    Sim, Excluir
+                </button>
+                <button type="button" class="btn" style="flex: 1; padding: 11px; font-weight: 700; background: #1E293B; color: #94A3B8; border: 1px solid #334155; border-radius: 8px;"
+                        @onclick="CancelDelete">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<MatchResponse> matches = new();
+    private List<DeckResponse> availableDecks = new();
     private string searchTerm = "";
     private Guid? expandedMatchId;
+
+    // Edit Modal State
+    private bool showEditModal = false;
+    private MatchResponse? matchToEdit;
+    private Guid editDeckId;
+    private string editOpponentArchetype = "";
+    private MatchResult editResult = MatchResult.Win;
+    private int? editRoundNumber;
+    private int? editTableNumber;
+    private string? editOpponentName;
+    private string? editOpponentPopId;
+    private bool? editCoinFlipWon;
+    private TurnOrder? editTurnOrder;
+    private int? editPlayerMulligans;
+    private int? editOpponentMulligans;
+    private int? editPlayerPrizesRemaining;
+    private int? editOpponentPrizesRemaining;
+    private WinCondition? editWinCondition;
+    private string? editStartingActivePokemon;
+    private string? editTacticalNotes;
+
+    // Delete Confirmation State
+    private bool showDeleteConfirm = false;
+    private Guid? matchToDeleteId;
 
     protected override async Task OnInitializedAsync()
     {
         ClientService.OnDataChanged += HandleDataChanged;
         await LoadMatchesAsync();
+        availableDecks = await ClientService.GetDecksAsync();
     }
 
     private async Task LoadMatchesAsync()
@@ -173,10 +379,92 @@
         expandedMatchId = expandedMatchId == id ? null : id;
     }
 
+    private void PromptDelete(Guid id)
+    {
+        matchToDeleteId = id;
+        showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        matchToDeleteId = null;
+        showDeleteConfirm = false;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (matchToDeleteId.HasValue)
+        {
+            await ClientService.DeleteMatchAsync(matchToDeleteId.Value);
+            matchToDeleteId = null;
+            showDeleteConfirm = false;
+            await LoadMatchesAsync();
+        }
+    }
+
+    private void OpenEditModal(MatchResponse m)
+    {
+        matchToEdit = m;
+        editDeckId = m.DeckId;
+        editOpponentArchetype = m.OpponentArchetype;
+        editResult = m.Result;
+        editRoundNumber = m.RoundNumber;
+        editTableNumber = m.TableNumber;
+        editOpponentName = m.OpponentName;
+        editOpponentPopId = m.OpponentPopId;
+        editCoinFlipWon = m.CoinFlipWon;
+        editTurnOrder = m.TurnOrder;
+        editPlayerMulligans = m.PlayerMulligans;
+        editOpponentMulligans = m.OpponentMulligans;
+        editPlayerPrizesRemaining = m.PlayerPrizesRemaining;
+        editOpponentPrizesRemaining = m.OpponentPrizesRemaining;
+        editWinCondition = m.WinCondition;
+        editStartingActivePokemon = m.StartingActivePokemon;
+        editTacticalNotes = m.TacticalNotes;
+        showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        matchToEdit = null;
+    }
+
+    private async Task SaveEditedMatchAsync()
+    {
+        if (matchToEdit == null || string.IsNullOrWhiteSpace(editOpponentArchetype))
+            return;
+
+        var req = new UpdateMatchRequest(
+            DeckId: editDeckId,
+            OpponentArchetype: editOpponentArchetype.Trim(),
+            Result: editResult,
+            TournamentId: matchToEdit.TournamentId,
+            RoundNumber: editRoundNumber,
+            TableNumber: editTableNumber,
+            OpponentName: editOpponentName?.Trim(),
+            OpponentPopId: editOpponentPopId?.Trim(),
+            CoinFlipWon: editCoinFlipWon,
+            TurnOrder: editTurnOrder,
+            PlayerMulligans: editPlayerMulligans,
+            OpponentMulligans: editOpponentMulligans,
+            PlayerPrizesRemaining: editPlayerPrizesRemaining,
+            OpponentPrizesRemaining: editOpponentPrizesRemaining,
+            WinCondition: editWinCondition,
+            StartingActivePokemon: editStartingActivePokemon?.Trim(),
+            TacticalNotes: editTacticalNotes?.Trim(),
+            TechCardsUsed: matchToEdit.TechCardsUsed
+        );
+
+        await ClientService.UpdateMatchAsync(matchToEdit.Id, req);
+        showEditModal = false;
+        matchToEdit = null;
+        await LoadMatchesAsync();
+    }
+
     private string FormatWinCondition(WinCondition? cond) => cond switch
     {
         WinCondition.PrizeKnockout => "Nocaute / 6 Prêmios",
-        WinCondition.Donk => "Donk (Sem Pokémon em Jogo)",
         WinCondition.Concede => "Concede (Rendição)",
         WinCondition.DeckOut => "Deck Out (Fim do Baralho)",
         WinCondition.TimeoutSuddenDeath => "Timeout / Morte Súbita",

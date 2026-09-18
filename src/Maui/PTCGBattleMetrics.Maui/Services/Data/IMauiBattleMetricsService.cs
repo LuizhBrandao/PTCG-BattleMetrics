@@ -15,6 +15,8 @@ public interface IMauiBattleMetricsService
     Task<TournamentResponse?> CreateTournamentAsync(CreateTournamentRequest request);
     Task<List<MatchResponse>> GetMatchesAsync(Guid? deckId = null, Guid? tournamentId = null);
     Task<MatchResponse> SaveMatchAsync(CreateMatchRequest request);
+    Task<bool> DeleteMatchAsync(Guid id);
+    Task<MatchResponse?> UpdateMatchAsync(Guid id, UpdateMatchRequest request);
     Task<int> SyncPendingMatchesAsync();
 
     Task<OverviewMetricsDto> GetOverviewMetricsAsync(Guid? deckId = null);

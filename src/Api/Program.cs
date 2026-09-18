@@ -248,6 +248,55 @@ matchesApi.MapPost("/", async (CreateMatchRequest request, IMatchRepository repo
     return Results.Created($"/api/matches/{match.Id}", response);
 });
 
+matchesApi.MapPut("/{id:guid}", async (Guid id, UpdateMatchRequest request, IMatchRepository repo, IDeckRepository deckRepo) =>
+{
+    var match = await repo.GetByIdAsync(id);
+    if (match == null) return Results.NotFound();
+
+    var deck = await deckRepo.GetByIdAsync(request.DeckId);
+    if (deck == null) return Results.BadRequest("Deck especificado não encontrado.");
+
+    match.DeckId = request.DeckId;
+    match.OpponentArchetype = request.OpponentArchetype;
+    match.Result = request.Result;
+    match.TournamentId = request.TournamentId;
+    match.RoundNumber = request.RoundNumber;
+    match.TableNumber = request.TableNumber;
+    match.OpponentName = request.OpponentName;
+    match.OpponentPopId = request.OpponentPopId;
+    match.CoinFlipWon = request.CoinFlipWon;
+    match.TurnOrder = request.TurnOrder;
+    match.PlayerMulligans = request.PlayerMulligans;
+    match.OpponentMulligans = request.OpponentMulligans;
+    match.PlayerPrizesRemaining = request.PlayerPrizesRemaining;
+    match.OpponentPrizesRemaining = request.OpponentPrizesRemaining;
+    match.WinCondition = request.WinCondition;
+    match.StartingActivePokemon = request.StartingActivePokemon;
+    match.TacticalNotes = request.TacticalNotes;
+    match.TechCardsUsed = request.TechCardsUsed ?? new List<string>();
+
+    await repo.UpdateAsync(match);
+
+    var updated = await repo.GetByIdAsync(id);
+    var response = new MatchResponse(
+        updated!.Id, updated.DeckId, updated.Deck?.Name ?? "", updated.Deck?.Archetype ?? "",
+        updated.TournamentId, updated.Tournament?.Name,
+        updated.OpponentArchetype, updated.Result, updated.CreatedAt,
+        updated.RoundNumber, updated.TableNumber, updated.OpponentName, updated.OpponentPopId,
+        updated.CoinFlipWon, updated.TurnOrder, updated.PlayerMulligans, updated.OpponentMulligans,
+        updated.PlayerPrizesRemaining, updated.OpponentPrizesRemaining,
+        updated.PlayerPrizesTaken, updated.OpponentPrizesTaken,
+        updated.WinCondition, updated.StartingActivePokemon, updated.TacticalNotes,
+        updated.TechCardsUsed,
+        updated.Games.Select(g => new CreateGameDetailRequest(
+            g.GameNumber, g.Result, g.TurnOrder, g.PlayerPrizesRemaining, g.OpponentPrizesRemaining,
+            g.WinCondition, g.StartingActivePokemon, g.Notes)).ToList(),
+        updated.MatchPoints
+    );
+
+    return Results.Ok(response);
+});
+
 matchesApi.MapDelete("/{id:guid}", async (Guid id, IMatchRepository repo) =>
 {
     await repo.DeleteAsync(id);

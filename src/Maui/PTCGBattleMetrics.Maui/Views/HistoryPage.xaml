@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:PTCGBattleMetrics.Maui.ViewModels"
              xmlns:dto="clr-namespace:PTCGBattleMetrics.Application.DTOs;assembly=PTCGBattleMetrics.Application"
+             xmlns:enums="clr-namespace:PTCGBattleMetrics.Domain.Enums;assembly=PTCGBattleMetrics.Domain"
              x:Class="PTCGBattleMetrics.Maui.Views.HistoryPage"
              x:DataType="vm:HistoryViewModel"
              Title="📜 Histórico"
@@ -10,6 +11,119 @@
 
     <ScrollView>
         <VerticalStackLayout Spacing="14" Padding="16,12,16,24" MaximumWidthRequest="700">
+
+            <!-- Painel de Edição de Partida (Modal / Expansível) -->
+            <Border IsVisible="{Binding ShowEditModal}"
+                    Stroke="#4F46E5" StrokeThickness="1" BackgroundColor="#151D2F"
+                    StrokeShape="RoundRectangle 14" Padding="16">
+                <VerticalStackLayout Spacing="12">
+                    <Grid ColumnDefinitions="*, Auto">
+                        <Label Text="✏️ Editar Partida do Histórico" FontSize="14" FontAttributes="Bold" TextColor="#818CF8" Grid.Column="0" />
+                        <Button Text="✕" FontSize="12" HeightRequest="32" WidthRequest="32" BackgroundColor="Transparent" TextColor="#94A3B8" Command="{Binding CloseEditModalCommand}" Grid.Column="1" />
+                    </Grid>
+
+                    <!-- Resultado da Partida -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Resultado da Partida *" FontSize="11" TextColor="#94A3B8" />
+                        <Grid ColumnDefinitions="*, *, *" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="🏆 VITÓRIA" FontSize="12" FontAttributes="Bold" HeightRequest="44" CornerRadius="8"
+                                    BackgroundColor="#10B981" TextColor="#022C22"
+                                    Command="{Binding SetEditResultCommand}">
+                                <Button.CommandParameter>
+                                    <enums:MatchResult>Win</enums:MatchResult>
+                                </Button.CommandParameter>
+                            </Button>
+                            <Button Grid.Column="1" Text="❌ DERROTA" FontSize="12" FontAttributes="Bold" HeightRequest="44" CornerRadius="8"
+                                    BackgroundColor="#EF4444" TextColor="#450A0A"
+                                    Command="{Binding SetEditResultCommand}">
+                                <Button.CommandParameter>
+                                    <enums:MatchResult>Loss</enums:MatchResult>
+                                </Button.CommandParameter>
+                            </Button>
+                            <Button Grid.Column="2" Text="⚖️ EMPATE" FontSize="12" FontAttributes="Bold" HeightRequest="44" CornerRadius="8"
+                                    BackgroundColor="#F59E0B" TextColor="#451A03"
+                                    Command="{Binding SetEditResultCommand}">
+                                <Button.CommandParameter>
+                                    <enums:MatchResult>Tie</enums:MatchResult>
+                                </Button.CommandParameter>
+                            </Button>
+                        </Grid>
+                        <Label Text="{Binding EditResult, StringFormat='Selecionado: {0}'}" FontSize="11" TextColor="#34D399" HorizontalTextAlignment="Center" />
+                    </VerticalStackLayout>
+
+                    <!-- Deck Utilizado -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Deck Utilizado *" FontSize="11" TextColor="#94A3B8" />
+                        <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 8" Padding="10,0">
+                            <Picker ItemsSource="{Binding Decks}"
+                                    ItemDisplayBinding="{Binding Name}"
+                                    SelectedItem="{Binding SelectedEditDeck}"
+                                    TextColor="#F8FAFC"
+                                    Title="Selecione o deck" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Arquétipo Enfrentado -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Arquétipo Enfrentado *" FontSize="11" TextColor="#94A3B8" />
+                        <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 8" Padding="10,0">
+                            <Entry Text="{Binding EditOpponentArchetype}" Placeholder="ex: Charizard ex, Lugia VSTAR..." TextColor="#F8FAFC" HeightRequest="40" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Rodada & Mesa -->
+                    <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="Rodada (Round)" FontSize="11" TextColor="#94A3B8" />
+                            <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 8" Padding="8,0">
+                                <Entry Text="{Binding EditRoundNumber}" Keyboard="Numeric" Placeholder="ex: 1" TextColor="#F8FAFC" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="Mesa" FontSize="11" TextColor="#94A3B8" />
+                            <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 8" Padding="8,0">
+                                <Entry Text="{Binding EditTableNumber}" Keyboard="Numeric" Placeholder="ex: 14" TextColor="#F8FAFC" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <!-- Oponente & POP ID -->
+                    <Grid ColumnDefinitions="*, *" ColumnSpacing="10">
+                        <VerticalStackLayout Grid.Column="0" Spacing="4">
+                            <Label Text="Nome Oponente" FontSize="11" TextColor="#94A3B8" />
+                            <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 8" Padding="8,0">
+                                <Entry Text="{Binding EditOpponentName}" Placeholder="Nome" TextColor="#F8FAFC" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="4">
+                            <Label Text="POP ID" FontSize="11" TextColor="#94A3B8" />
+                            <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 8" Padding="8,0">
+                                <Entry Text="{Binding EditOpponentPopId}" Placeholder="ex: 123456" TextColor="#F8FAFC" HeightRequest="40" />
+                            </Border>
+                        </VerticalStackLayout>
+                    </Grid>
+
+                    <!-- Anotações Táticas -->
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Anotações Táticas" FontSize="11" TextColor="#94A3B8" />
+                        <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 8" Padding="8,4">
+                            <Editor Text="{Binding EditTacticalNotes}" HeightRequest="50" Placeholder="Erros de sequenciamento..." TextColor="#F8FAFC" />
+                        </Border>
+                    </VerticalStackLayout>
+
+                    <!-- Botões Salvar / Cancelar -->
+                    <Grid ColumnDefinitions="*, Auto" ColumnSpacing="10" Margin="0,6,0,0">
+                        <Button Grid.Column="0" Text="💾 Salvar Alterações"
+                                FontSize="13" FontAttributes="Bold" HeightRequest="44" CornerRadius="8"
+                                BackgroundColor="#4F46E5" TextColor="#F8FAFC"
+                                Command="{Binding SaveEditedMatchCommand}" />
+                        <Button Grid.Column="1" Text="Cancelar"
+                                FontSize="13" HeightRequest="44" CornerRadius="8"
+                                BackgroundColor="#1E293B" TextColor="#94A3B8"
+                                Command="{Binding CloseEditModalCommand}" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
 
             <!-- Barra de Busca -->
             <Border Stroke="#334155" BackgroundColor="#1E293B" StrokeShape="RoundRectangle 12" Padding="12,4">
@@ -58,6 +172,29 @@
                                     <Label Text="{Binding OpponentPrizesRemaining}" FontSize="11" TextColor="#94A3B8" />
                                     <Label Text="{Binding TournamentName, StringFormat='• {0}'}" FontSize="11" TextColor="#FBBF24" />
                                 </HorizontalStackLayout>
+
+                                <!-- Ações: Editar & Excluir -->
+                                <Grid ColumnDefinitions="*, Auto, Auto" ColumnSpacing="8" Margin="0,4,0,0">
+                                    <BoxView Grid.Column="0" Color="Transparent" />
+                                    <Button Grid.Column="1"
+                                            Text="✏️ Editar"
+                                            FontSize="11"
+                                            HeightRequest="32"
+                                            CornerRadius="6"
+                                            BackgroundColor="#1E293B"
+                                            TextColor="#818CF8"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HistoryViewModel}}, Path=OpenEditModalCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Grid.Column="2"
+                                            Text="🗑️ Excluir"
+                                            FontSize="11"
+                                            HeightRequest="32"
+                                            CornerRadius="6"
+                                            BackgroundColor="#3A1C1C"
+                                            TextColor="#F87171"
+                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:HistoryViewModel}}, Path=DeleteMatchCommand}"
+                                            CommandParameter="{Binding Id}" />
+                                </Grid>
                             </VerticalStackLayout>
                         </Border>
                     </DataTemplate>

@@ -86,6 +86,27 @@ public record CreateMatchRequest(
     DateTimeOffset? CreatedAt = null
 );
 
+public record UpdateMatchRequest(
+    Guid DeckId,
+    string OpponentArchetype,
+    MatchResult Result,
+    Guid? TournamentId = null,
+    int? RoundNumber = null,
+    int? TableNumber = null,
+    string? OpponentName = null,
+    string? OpponentPopId = null,
+    bool? CoinFlipWon = null,
+    TurnOrder? TurnOrder = null,
+    int? PlayerMulligans = null,
+    int? OpponentMulligans = null,
+    int? PlayerPrizesRemaining = null,
+    int? OpponentPrizesRemaining = null,
+    WinCondition? WinCondition = null,
+    string? StartingActivePokemon = null,
+    string? TacticalNotes = null,
+    List<string>? TechCardsUsed = null
+);
+
 public record MatchResponse(
     Guid Id,
     Guid DeckId,
